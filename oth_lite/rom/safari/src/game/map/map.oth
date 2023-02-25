@@ -1,0 +1,385 @@
+
+var HARDCODE_FLAG = true
+
+	(* map loading functions *)
+
+func nearEq(px, tarPx) {
+	return px >= tarPx - 1 && px <= tarPx + 1
+}
+
+func pixelMatch(px, tarPx) {
+	return nearEq(px[0], tarPx[0]) && nearEq(px[1], tarPx[1]) && nearEq(px[2], tarPx[2]) && px[3] != 0
+}
+
+func loadMapRaw(image)
+{
+	var tileData = newGrid([image.width, image.height - 1])
+	var pos = (0, 0)
+	for (i in 0 to image.width - 1; j in 0 to image.height - 1) {
+		var tile = { tType: "blank", landCheck: false, decor: "none", spec: "none" }
+		var px = image.pixel(i, j)
+		if (pixelMatch(px, colors.BLACK)) {
+			tile.tType = "wall"
+		} elsif (pixelMatch(px, colors.F_GRAY)) {
+			tile.tType = "grass"
+		} elsif (pixelMatch(px, colors.F_LGRAY)) {
+			tile.tType = "road"
+		} elsif (pixelMatch(px, colors.F_RED)) {
+			tile.tType = "road"
+			pos = (i, j)
+		} elsif (pixelMatch(px, colors.F_BLUE)) {
+			tile.tType = "stair"
+		} elsif (pixelMatch(px, colors.F_GREEN)) {
+			tile.tType = "prop"
+			tile.decor = "bush"
+		} elsif (pixelMatch(px, colors.F_YELLOW)) {
+			tile.tType = "prop"
+			tile.decor = "tree"
+		} elsif (pixelMatch(px, colors.F_MAGENTA)) {
+			tile.tType = "grass"
+			tile.decor = "shortgrass"
+		} elsif (pixelMatch(px, colors.F_CYAN)) {
+			tile.tType = "grass"
+			tile.decor = "tallgrass"
+		} elsif (pixelMatch(px, colors.F_ORANGE)) {
+			tile.tType = "prop"
+			tile.decor = "rock"
+		} elsif (pixelMatch(px, colors.P_ORANGE)) {
+			tile.tType = "prop"
+			tile.decor = "house"
+		} elsif (pixelMatch(px, colors.P_PURPLE)) {
+			tile.tType = "grass"
+			tile.spec = "block"
+		} elsif (pixelMatch(px, colors.P_PINK)) {
+			tile.tType = "stairDown"
+		}
+		tileData[i][j] = tile
+	}
+	return (tileData, pos)
+}
+
+func loadMapAlt()
+{
+	var imgWidth = levelDim.1
+	var imgHeight = levelDim.2
+	var tileData = newGrid([imgWidth, imgHeight])
+	var pos = (0, 0)
+	var ix = 0
+	for (i in 0 to imgWidth - 1; j in 0 to imgHeight - 1) {
+		var tile = { tType: "blank", landCheck: false, decor: "none", spec: "none" }
+		var px = levelRaw[ix]
+		ix = ix + 1
+		if (px = 1) {
+			tile.tType = "wall"
+		} elsif (px = 2) {
+			tile.tType = "grass"
+		} elsif (px = 3) {
+			tile.tType = "road"
+		} elsif (px = 4) {
+			tile.tType = "road"
+			pos = (i, j)
+		} elsif (px = 5) {
+			tile.tType = "stair"
+		} elsif (px = 6) {
+			tile.tType = "prop"
+			tile.decor = "bush"
+		} elsif (px = 7) {
+			tile.tType = "prop"
+			tile.decor = "tree"
+		} elsif (px = 8) {
+			tile.tType = "grass"
+			tile.decor = "shortgrass"
+		} elsif (px = 9) {
+			tile.tType = "grass"
+			tile.decor = "tallgrass"
+		} elsif (px = 10) {
+			tile.tType = "prop"
+			tile.decor = "rock"
+		} elsif (px = 11) {
+			tile.tType = "prop"
+			tile.decor = "house"
+		} elsif (px = 12) {
+			tile.tType = "grass"
+			tile.spec = "block"
+		} elsif (px = 13) {
+			tile.tType = "stairDown"
+		}
+		tileData[i][j] = tile
+	}
+	return (tileData, pos)
+}
+
+
+func fillHeightMap(rawMap, tileData, i, j, h, dir) {
+	# wall check
+	if (rawMap[i][j].tType = "wall") {
+		var ch = tileData[i][j].height
+		if (h + 1 > ch) { tileData[i][j].height = h + 1 }
+		return
+	}
+	# land check
+	if (rawMap[i][j].tType = "blank" || rawMap[i][j].tType = "stairDown") { return }
+	# repeat check
+	if (rawMap[i][j].landCheck) { return }
+	rawMap[i][j].landCheck = true
+	# set land height
+	var nh = h
+	if (rawMap[i][j].tType = "stair") {
+		if (dir = "d") { h = h - 1 }
+		nh = h + 1
+		tileData[i][j].height = h
+	} else { tileData[i][j].height = h }
+	fillHeightMap(rawMap, tileData, i - 1, j, h, "l")
+	fillHeightMap(rawMap, tileData, i + 1, j, h, "r")
+	fillHeightMap(rawMap, tileData, i, j - 1, nh, "u")
+	fillHeightMap(rawMap, tileData, i, j + 1, h, "d")
+}
+
+func findWallEnd(rawMap, tileData, i, j) {
+	var ix = i + 1
+	while (true) {
+		if (ix = rawMap.length - 1 || tileData[ix][j].height != 0) { return ix }
+		ix = ix + 1
+	}
+}
+
+func fillWallStrip(rawMap, tileData, i, j) {
+	var ix = findWallEnd(rawMap, tileData, i, j)
+	var x1 = tileData[i][j].height
+	var x2 = tileData[ix][j].height
+	if (x1 = 0 && x2 = 0) { x1 = 2 x2 = 2 }
+	elsif (x1 = 0) { x1 = x2 }
+	elsif (x2 = 0) { x2 = x1 }
+	var d = (ix - i) + 1
+	var rise = x2 - x1
+	for (k in i to ix) {
+		var xk = x1 + round(rise * flDiv(k - i, d))
+		tileData[k][j].height = xk
+	}
+}
+
+func fillWallAll(rawMap, tileData) {
+	var width = rawMap.length
+	var height = rawMap[0].length
+	for (i in 0 to width - 1; j in 0 to height - 1) {
+		if (rawMap[i][j].tType = "wall" && i != width - 1 && tileData[i + 1][j].height = 0) {
+			fillWallStrip(rawMap, tileData, i, j)
+		}
+	}
+}
+
+func fillHouseTile(tileData, i, j) {
+	for (x in 0 to 4; y in 0 to 1) {
+		tileData[i + x][j - y].tType = "prop"
+		if (x != 0 || y != 0) { tileData[i + x][j - y].decor = "house_part" }
+	}
+}
+
+func fillHouseAll(rawMap, tileData) {
+	for (i in 0 to rawMap.length - 1; j in 0 to rawMap[0].length - 1) {
+		if (rawMap[i][j].decor = "house") {
+			fillHouseTile(tileData, i, j)
+		}
+	}	
+}
+
+func fixBugHeight(tileData) {
+	for (i in 0 to tileData.length - 1; j in 0 to tileData[0].length - 1) {
+		if (tileData[i][j].tType = "blank") { tileData[i][j].height = 0 }
+	}
+}
+
+func lagHeight(tileData) {
+	for (i in 1 to tileData.length - 2; j in 1 to tileData[0].length - 2) {
+		tileData[i][j].dl = tileData[i - 1][j].height
+		tileData[i][j].dr = tileData[i + 1][j].height
+		tileData[i][j].df = tileData[i][j + 1].height
+		tileData[i][j].db = tileData[i][j - 1].height
+	}
+}
+
+func buildMap(rawMap, startPos)
+{
+	var width = rawMap.length
+	var height = rawMap[0].length
+	var tileData = newGrid([width, height])
+	for (i in 0 to width - 1; j in 0 to height - 1) {
+		var rawTile = rawMap[i][j]
+		var newTile = {
+			tType: rawTile.tType, decor: rawTile.decor, wasBlock: false, height: 0, vz: rndGet() * 0.2, spec: rawTile.spec,
+			dl: 0, dr: 0, df: 0, db: 0
+		}
+		if (newTile.spec = "block") { newTile.wasBlock = true }
+		tileData[i][j] = newTile
+	}
+	fillHeightMap(rawMap, tileData, startPos.1, startPos.2, 1, "u")
+	fillWallAll(rawMap, tileData)
+	fillHouseAll(rawMap, tileData)
+	fixBugHeight(tileData)
+	lagHeight(tileData)
+	return tileData
+}
+
+func loadSwitcher() {
+	if (HARDCODE_FLAG) { return loadMapAlt() }
+	else { return loadMapRaw(getImage("wmap")) }
+}
+
+func loadMap() {
+	var (rawMap, startPos) = loadSwitcher()
+	var tileData = buildMap(rawMap, startPos)
+	return (tileData, startPos)
+}
+
+	(* map read functions *)
+
+func oobMap(tileData, x, y) {
+	return x < 0 || x >= tileData.length || y < 0 || y >= tileData[0].length
+}
+
+func notTerrMap(tileData, x, y) {
+	if (oobMap(tileData, x, y)) { return false }
+	var tType = tileData[x][y].tType
+	var spec = tileData[x][y].spec
+	var decor = tileData[x][y].decor
+	return tType = "wall" || (tType = "prop" && decor != "none") || spec = "block"
+}
+
+func notLandMap(tileData, x, y) {
+	if (oobMap(tileData, x, y)) { return false }
+	var tType = tileData[x][y].tType
+	var spec = tileData[x][y].spec
+	var decor = tileData[x][y].decor
+	return tType = "blank" || tType = "wall" || (tType = "prop" && decor != "none") || spec = "block"
+}
+
+func isStairMap(tileData, x, y) {
+	if (oobMap(tileData, x, y)) { return false }
+	return tileData[x][y].tType = "stair"
+}
+
+func isSolidMap(tileData, x, y) {
+	if (oobMap(tileData, x, y)) { return false }
+	var tType = tileData[x][y].tType
+	var spec = tileData[x][y].spec
+	return tType = "wall" || spec = "block"
+}
+
+func heightMap(tileData, px, py) {
+	if (oobMap(tileData, floor(px), floor(py))) { return 0 }
+	var tile = tileData[floor(px)][floor(py)]
+	if (tile.tType = "stair") {
+		return tile.height + 1 + (floor(py) - py)
+	} elsif (tile.tType = "stairDown") {
+		return 1 + (floor(py) - py)	
+	} elsif (tile.tType = "blank") {
+		return 0
+	}
+	return tile.height
+}
+
+	(* map drawing functions *)
+
+func meshTile(tType) {
+	if (tType = "grass") {
+		return mesh:("test_box", "tset", [1, 0, 0, 0, 0, 0])
+	} elsif (tType = "road") {
+		return mesh:("test_box", "tset", [2, 0, 0, 0, 0, 0])
+	} elsif (tType = "prop") {
+		return mesh:("test_box", "tset", [5, 0, 0, 0, 0, 0])
+	}
+	return mesh:("test_box", "tset", [3, 4, 4, 4, 4, 0])
+}
+
+func meshTopTex(tType) {
+	if (tType = "grass") { return 1 }
+	elsif (tType = "road") { return 2 }
+	elsif (tType = "prop") { return 5 }
+	else { return 3 }
+}
+
+func meshSideTex(tType) {
+	if (tType = "grass") { return 0 }
+	elsif (tType = "road") { return 0 }
+	elsif (tType = "prop") { return 0 }
+	else { return 4 }
+}
+
+func meshLagTile(sList, bx, by, tile) {
+	var sf = meshSideTex(tile.tType)
+	for (k in tile.dl + 1 to tile.height) {
+		sList.add(offset:(bx, 1 - k, by, mesh:("left_tile", "tset", [sf])))
+	}
+	for (k in tile.dr + 1 to tile.height) {
+		sList.add(offset:(bx, 1 - k, by, mesh:("right_tile", "tset", [sf])))
+	}
+	for (k in tile.df + 1 to tile.height) {
+		sList.add(offset:(bx, 1 - k, by, mesh:("front_tile", "tset", [sf])))
+	}
+	for (k in tile.db + 1 to tile.height) {
+		sList.add(offset:(bx, 1 - k, by, mesh:("back_tile", "tset", [sf])))
+	}
+	var tf = meshTopTex(tile.tType)
+	sList.add(offset:(bx, 1 - tile.height, by, mesh:("top_tile", "tset", [tf])))
+}
+
+func meshStairUp() {
+	return mesh:("stair_up", "tset",
+		[6, 6, 6, 6, 6, 6, 6, 6,
+		6, 6, 6, 6, 6, 6, 6, 6])
+}
+
+func meshHouse() {
+	return meshPaint:("house", "x2", [
+		[0, 1, 40, 24], [0, 1, 40, 24],
+		[5, 1, 16, 24], [5, 1, 16, 24],
+		[6, 4, 8, 8], [6, 4, 8, 8], [6, 4, 8, 8], [6, 4, 8, 8],
+		[0, 4, 42, 18]
+	])
+}
+
+func meshBlock() {
+	return mesh:("test_box", "tset", [7, 7, 7, 7, 7, 7])
+}
+
+func addTallGrass(sList, tile, bx, by, h) {
+	for (i in 0 to 1; j in 0 to 1) {
+		sList.add(offset:(bx - 0.02 + (i * 0.53), 0 - h, by + 0.25 + (j * 0.5) + (tile.vz * 0.5), sprite:("bush", 2, false)))
+	}
+}
+
+func sceneMap(tileData, x, y) {
+	var sList = []
+	for (i in -15 to 15; j in -20 to 10) {
+		var (bx, by) = (x + i, y + j)
+		if (oobMap(tileData, bx, by) = false && tileData[bx][by].tType != "blank") {
+			var tile = tileData[bx][by]
+			#var m = meshTile(tile.tType)
+			#for (k in 1 to tile.height) {
+			#	sList.add(offset:(bx, 1 - k, by, m))
+			#}
+			meshLagTile(sList, bx, by, tile)
+			if (tile.tType = "stair") {
+				sList.add(offset:(bx, 0 - tile.height, by, meshStairUp()))
+			} elsif (tile.decor = "bush") {
+				sList.add(offset:(bx, 0 - tile.height, by + (0.5 + tile.vz), sprite:("bush", 0, false)))
+			} elsif (tile.decor = "tree") {
+				sList.add(offset:(bx, -1 - tile.height, by + (0.5 + tile.vz), sprite:("tree", 0, false)))
+			} elsif (tile.decor = "shortgrass") {
+				sList.add(offset:(bx, 0 - tile.height, by + (0.5 + (tile.vz * 2)), sprite:("bush", 1, false)))
+			} elsif (tile.decor = "tallgrass") {
+				addTallGrass(sList, tile, bx, by, tile.height)
+			} elsif (tile.decor = "rock") {
+				sList.add(offset:(bx, 0 - tile.height, by + (0.5 + (tile.vz * 2)), sprite:("bush", 3, false)))
+			} elsif (tile.decor = "house") {
+				sList.add(offset:(bx, -2 - tile.height, by + 1, meshHouse()))
+			}
+			if (tile.spec = "block") {
+				sList.add(offset:(bx, 0 - tile.height, by, meshBlock()))
+			} elsif (tile.tType = "stairDown") {
+				sList.add(offset:(bx, 0, by, meshStairUp()))
+			} 
+		}
+	}
+	return list:(sList)
+}

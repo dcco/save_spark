@@ -1,0 +1,19 @@
+
+func initWin() {
+	return {
+		alpha: 0
+	}
+}
+
+func updateWin(w) {
+	if (w.alpha < 1.2) { w.alpha = w.alpha + 0.003 }
+}
+
+func sceneWin(w) {
+	var sList = []
+	var alpha = w.alpha - 0.2
+	if (alpha < 0) { alpha = 0 }
+	sList.add(image:("end"))
+	sList.add(text:(119, 186, "THE END"))
+	return color4:((255 * alpha, 255 * alpha, 255 * alpha), 1, list:(sList))
+}

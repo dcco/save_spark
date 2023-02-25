@@ -1,0 +1,22 @@
+
+var npcState = {
+	init: fn(world, obj) {},
+	anim: fn(obj) { return "idle" },
+	motion: fn(world, obj) {
+	}
+}
+
+var chestState = {
+	init: fn(world, obj) {
+		obj.isOpen = false
+	},
+	anim: fn(obj) {
+		if (obj.isOpen = true) { return "open" }
+		return "close"
+	},
+	motion: fn(world, obj) {
+		var cData = chestData[obj.npcId]
+		var flagName = cData.flag
+		if (world.flagList[flagName]) { obj.isOpen = true }
+	}
+}

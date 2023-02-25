@@ -1,0 +1,17 @@
+
+func initFlagList() {
+	return {
+		quad: false,
+		bomb: false,
+		push: false,
+		raft: false,
+		time: false,
+		money1: false,
+		money2: false,
+		money3: false,
+		money4: false,
+		money5: false,
+		money6: false,
+		coin: 0
+	}
+}

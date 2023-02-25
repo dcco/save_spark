@@ -1,0 +1,35 @@
+
+func animState(s) {
+	return {
+		init: fn(world, obj) {},
+		anim: fn(obj) { return s },
+		motion: fn(world, obj) {}	
+	}
+}
+
+func fallState(s) {
+	return {
+		init: fn(world, obj) {},
+		anim: fn(obj) { return s },
+		motion: fn(world, obj)
+		{
+			if (obj.groundFlag = false) {
+				obj.zspd = obj.zspd - 8
+			}
+		}	
+	}
+}
+
+func compState(s1, s2) {
+	return {
+		init: fn(world, obj) {
+			s1.init(world, obj)
+			s2.init(world, obj)
+		},
+		anim: fn(obj) { return s1.anim(obj) },
+		motion: fn(world, obj) {
+			s1.motion(world, obj)
+			s2.motion(world, obj)
+		}	
+	}
+}

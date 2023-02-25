@@ -1,0 +1,116 @@
+
+func initSystem()
+{
+	return {
+		pause: false,
+		dialogue: false,
+		dia: null,
+		world: initWorld(null),
+		fade: initFade(),
+		deathCount: 0,
+		start: true,
+		win: false,
+		winState: initWin(),
+		vol: initVolume()
+	}
+}
+
+func updateSystem(sys)
+{
+	var world = sys.world
+	updateVolume(sys.vol)
+	# fader code
+	updateFade(sys.fade)
+	if (blackFade(sys.fade) && sys.win = false) {
+		sys.dialogue = false
+		sys.dia = null
+		sys.world = initWorld(sys.world.flagList)
+		sys.deathCount = sys.deathCount + 1
+		openFade(sys.fade)
+	}
+	# start code
+	if (sys.start) {
+		if (keyPress("start")) {
+			playSound("start.wav")
+			sys.start = false
+		}
+		return
+	}
+	# win code
+	if (blackFade(sys.fade) && sys.win) {
+		updateWin(sys.winState)
+		return
+	}
+	# dialogue code
+	if (sys.dialogue) {
+		updateDialogue(sys.dia)
+		if (sys.dia.done) {
+			if (sys.win = false) { world.noAct = false }
+			sys.dialogue = false
+		}
+		return
+	}
+	# normal + pause code
+	# - pause input
+	if (keyPress("start")) {
+		sys.pause = (sys.pause = false)
+	}
+	# - run world code
+	if (sys.pause = false) {
+		updateWorld(world)
+	}
+	# - win check
+	if (world.win = true) {
+		sys.win = true
+		closeFade(sys.fade)
+	}
+	# - dialogue input
+	if (world.dFlag = true) {
+		sys.dialogue = true
+		sys.dia = initDialogue(world, world.dId, world.dType)
+		world.dFlag = false
+		if (world.dType = "chest") {
+			world.flagList[chestData[world.dId].flag] = true
+		}
+		world.noAct = true
+	}
+	# - death check
+	if (world.player.decay) {
+		closeFade(sys.fade)
+	}
+}
+
+func scene3dSystem(sys)
+{
+	return sceneWorld(sys.world)
+}
+
+func renderFlags(sys)
+{
+	var noise = 0
+	if (sys.world.timeSlow) { noise = 1 }
+	return {
+		noiseFlag: noise,
+		noiseSeed: rndGet()
+	}
+}
+
+func sceneSystem(sys)
+{
+	var sList = []
+	sList.add(hudWorld(sys.world))
+	if (sys.dialogue) {
+		sList.add(sceneDialogue(sys.dia))
+	} elsif (sys.pause) {
+		sList.add(scenePause())
+	}
+	sList.add(sceneFade(sys.fade))
+	if (blackFade(sys.fade) && sys.win) {
+		sList.add(sceneWin(sys.winState))
+	}
+	sList.add(sceneVolume(sys.vol))
+	if (sys.start) {
+		sList.add(sceneStart())
+	}
+	return list:(sList)
+}

@@ -1,0 +1,160 @@
+
+func findTileNearPlayer(world, range, md) {
+	var tileList = []
+	var tx = fromUnit(centerX(world.player.hitbox))
+	var ty = fromUnit(centerY(world.player.hitbox))
+	for (i in 0 - range to range; j in 0 - range to range) {
+		if (abs(i) + abs(j) >= md) {
+			if (notLandMap(world.map, tx + i, ty + j) = false) {
+				tileList.add((tx + i, ty + j))
+			}
+		}
+	}
+	if (tileList.length = 0) { return (-1, -1) }
+	return tileList[rndRange(0, tileList.length)]
+}
+
+func distFromPlayer(world, obj) {
+	var dx = centerX(world.player.hitbox) - centerX(obj.hitbox)
+	var dy = centerY(world.player.hitbox) - centerY(obj.hitbox)
+	return sqrt((dx * dx) + (dy * dy))
+}
+
+func selectCootState(world, obj) {
+	var m = rndRange(0, 6)
+	if (m >= 0 && m <= 2) {
+		var (tx, ty) = findTileNearPlayer(world, 2, 1)
+		if (tx = -1) {
+			obj.time = rndRange(40, 100)
+		} else {
+			obj.tarX = tx
+			obj.tarY = ty
+			obj.subState = "walk"
+		}
+	} else {
+		obj.time = rndRange(40, 100)
+	}
+}
+
+var cootState = {
+	init: fn(world, obj) {
+		obj.tarX = obj.hitbox.x
+		obj.tarY = obj.hitbox.y
+		obj.subState = "wait"
+		obj.patTime = 0
+		obj.stepTime = 0
+	},
+	anim: fn(obj) {
+		if (obj.xspd != 0 || obj.yspd != 0) { return "walk" }
+		return "idle"
+	},
+	motion: fn(world, obj) {
+		# animation
+		if (obj.xspd > 0) { obj.facing = true }
+		elsif (obj.xspd < 0) { obj.facing = false }
+		var playerDist = distFromPlayer(world, obj)
+		if (obj.subState = "wait") {
+			# if too far away, select action
+			if (playerDist > toUnit(3)) {
+				obj.time = 0
+			}
+			# stop moving and wait for coot
+			if (obj.time = 0) {
+				selectCootState(world, obj)
+			} else {
+				obj.xspd = 0
+				obj.yspd = 0
+			}
+		} elsif (obj.subState = "walk") {
+			# calculate direction to target
+			var dx = toUnit(obj.tarX) + 256 - obj.hitbox.x
+			var dy = toUnit(obj.tarY) + 256 - obj.hitbox.y
+			var angle = atan2(dx, dy)
+			var SPD = 100
+			if (playerDist > toUnit(10)) { SPD = 300 }
+			if (abs(dx) + abs(dy) >= toUnit(6)) { SPD = 200 }
+			obj.xspd = round(cos(angle) * SPD) 
+			obj.yspd = round(sin(angle) * SPD)
+			# check if close enough
+			if (abs(dx) + abs(dy) < 1024) {
+				if (rndChance(2, 3)) { obj.time = rndRange(40, 100) }
+				obj.subState = "wait"
+			}
+			# stop if a wall is hit
+			if (obj.wallFlag) {
+				obj.time = rndRange(40, 100)
+				obj.subState = "wait"
+			}
+		}
+		# step noises
+		if (playerDist < toUnit(8) && (obj.xspd != 0 || obj.yspd != 0)) {
+			obj.stepTime = obj.stepTime + 1
+			if (obj.stepTime >= 10) { playSound("stepvq.wav") obj.stepTime = 0 }
+		}
+		(*elsif (obj.subState = "forceWait") {
+			obj.xspd = 0
+			obj.yspd = 0
+			obj.patTime = obj.patTime + 1
+			if (obj.time = 0) { obj.subState = "wait" }
+		}*)
+		# if far, cat gets impatient
+		if (playerDist > toUnit(10)) {
+			obj.patTime = obj.patTime + 1
+		}
+		# impatience teleport
+		if (obj.patTime > 360 || playerDist > toUnit(14)) {
+			# player on water check
+			var tx = fromUnit(centerX(world.player.hitbox))
+			var ty = fromUnit(centerY(world.player.hitbox))
+			if (oobMap(world.map, tx, ty) = false && world.map[tx][ty].tType != "blank") {
+				var (tx, ty) = findTileNearPlayer(world, 2, 1)
+				initPos(world.map, obj, tx, ty)
+				explode(world, obj)
+				playSound("explode.wav")
+				obj.patTime = 0
+			}
+		}
+	}
+}
+
+var sparkState = {
+	init: fn(world, obj) {
+		obj.subState = "wait"
+	},
+	anim: fn(obj) { return "na" },
+	motion: fn(world, obj)
+	{
+		var player = world.player
+		if (obj.subState = "wait") {
+			var dx = abs(centerX(player.hitbox) - centerX(obj.hitbox))
+			var dy = abs(centerY(player.hitbox) - centerY(obj.hitbox))
+			if (dx < toUnit(2) && dy < toUnit(2)) {
+				obj.subState = "float"
+				playSound("tele.wav")
+			}
+		} elsif (obj.subState = "float") {
+			var dz = abs(player.hitbox.z - obj.hitbox.z)
+			if (dz < toUnit(8)) {
+				obj.zspd = obj.zspd + 8
+			} else {
+				# apparate rat
+				var newObj = newGameObj("RAT")
+				newObj.hitbox.x = obj.hitbox.x + toUnit(6)
+				newObj.hitbox.y = obj.hitbox.y
+				newObj.hitbox.z = player.hitbox.z
+				world.objList.add(newObj)
+				explode(world, newObj)
+				# setup boss status
+				world.boss = newObj
+				newObj.maxHealth = newObj.health
+				# lockout player
+				world.player.stairFlag = true
+				# dog is done
+				playSound("explode.wav")
+				playMusic("boss.ogg")
+				obj.zspd = 0
+				obj.subState = "end"
+			}
+		}
+	}
+}

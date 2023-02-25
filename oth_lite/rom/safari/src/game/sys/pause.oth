@@ -1,0 +1,8 @@
+
+func scenePause()
+{
+	var sList = []
+	sList.add(box:((0, 0, 0), 0.8, (0, 0, 267, 200)))
+	sList.add(text:(121, 16, "PAUSE"))
+	return list:(sList)
+}

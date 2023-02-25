@@ -1,0 +1,23 @@
+
+var stateTable = {
+	pc: noState,
+	coin: fallState("coin"),
+	heart: fallState("heart"),
+	coots: cootState,
+	boomerang: boomerState,
+	bomb: bombState,
+	crit: critState,
+	critBlack: compState(critState, phaseState),
+	shuffle: shuffleState,
+	knight: compState(shuffleState, shootState),
+	knightF: compState(shuffleState, boomShootState),
+	wizz: wizzState,
+	bounce: bounceState,
+	decay: decayState,
+	decay2: decayState2,
+	npc: npcState,
+	chest: chestState,
+	spark: sparkState,
+	rat: compState(bounceState, ratState),
+	corpse: corpseState
+}

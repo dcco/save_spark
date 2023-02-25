@@ -1,0 +1,285 @@
+
+
+func initPlayer(map, startPos)
+{
+	var obj = newGameObj("PLAYER")
+	# animation variables
+	obj.moving = false
+	obj.dir = 0
+	obj.superFace = 0
+	obj.stepTime = 0
+	# enemy interaction
+	obj.health = 10
+	obj.mp = 1500
+	obj.inv = {
+		time: 0
+	}
+	# env interaction
+	obj.waterFlag = false
+	obj.onWater = false
+	obj.pushState = {
+		active: false
+	}
+	obj.npcObj = null
+	obj.actId = 0
+	# ability interaction
+	obj.actDelayTime = 0
+	# position
+	var (sx, sy) = startPos
+	initPos(map, obj, sx, sy)
+	return obj
+}
+
+func blockCheck(world, player)
+{
+	var dir = player.dir
+	var dx = 0
+	var dy = 0
+	if (dir = 1) { dy = -1 }
+	elsif (dir = 2) { dy = 1 }
+	elsif (dir = 3) { dx = -1 }
+	elsif (dir = 4) { dx = 1 }
+	if (player.wallFlag && dir != 0) {
+		var tx = fromUnit(centerX(player.hitbox)) + dx
+		var ty = fromUnit(centerY(player.hitbox)) + dy
+		if (oobMap(world.map, tx, ty)) { return }
+		var pType = world.map[tx + dx][ty + dy].tType
+		if (world.map[tx][ty].spec = "block" && notLandMap(world.map, tx + dx, ty + dy) = false
+				&& pType != "stair" && pType != "stairDown") {
+			world.map[tx][ty].spec = "none"
+			playSound("rumble.wav")
+			player.pushState.active = true
+			player.pushState.x = toUnit(tx)
+			player.pushState.y = toUnit(ty)
+			player.pushState.tarX = toUnit(tx + dx)
+			player.pushState.tarY = toUnit(ty + dy)
+			player.pushState.fx = tx + dx
+			player.pushState.fy = ty + dy
+		}
+	}
+}
+
+func updatePushState(world, player)
+{
+	# stop player
+	player.moving = false
+	player.xspd = 0
+	player.yspd = 0
+	# movement code
+	var ps = player.pushState
+	var SPD = 150
+	var dx = 0
+	var dy = 0
+	if (ps.tarX < ps.x) { dx = 0 - SPD }
+	elsif (ps.tarX > ps.x) { dx = SPD }
+	if (ps.tarY < ps.y) { dy = 0 - SPD }
+	elsif (ps.tarY > ps.y) { dy = SPD }
+	if (abs(ps.tarX - ps.x) < SPD) { ps.x = ps.tarX }
+	else { ps.x = ps.x + dx }
+	if (abs(ps.tarY - ps.y) < SPD) { ps.y = ps.tarY }
+	else { ps.y = ps.y + dy }
+	if (ps.x = ps.tarX && ps.y = ps.tarY) {
+		world.map[ps.fx][ps.fy].spec = "block"
+		ps.active = false
+	}
+}
+
+func boomMax(world)
+{
+	if (world.flagList.quad) { return 4 }
+	return 2
+}
+
+func actionList(world)
+{
+	var actList = []
+	if (world.flagList.bomb) { actList.add("BOMB") }
+	elsif (world.flagList.time) { actList.add("TIME") }
+}
+
+func isInWall(world, obj)
+{
+	var tx = fromUnit(centerX(obj.hitbox))
+	var ty = fromUnit(centerY(obj.hitbox))
+	return isSolidMap(world.map, tx, ty)
+}
+
+func updatePlayer(world, player)
+{
+	# housekeeping
+	if (player.inv.time > 0) { player.inv.time = player.inv.time - 1 }
+	if (player.actDelayTime > 0) { player.actDelayTime = player.actDelayTime - 1 }
+	if (player.moving && player.onWater = false) {
+		if (player.stepTime <= 0) { playSound("stepq.wav") player.stepTime = 20 }
+		else { player.stepTime = player.stepTime - 1 }
+	}
+	player.waterFlag = world.flagList.raft
+	# push block state
+	if (player.pushState.active) {
+		updatePushState(world, player)
+		return
+	}
+	# speed calc
+	var SPD = toUnit(0.075)
+	var cx = fromUnit(centerX(player.hitbox))
+	var cy = fromUnit(centerY(player.hitbox))
+	var wasWater = player.onWater
+	player.onWater = false
+	if (oobMap(world.map, cx, cy) = false) {
+		if (world.map[cx][cy].tType = "stair") { SPD = toUnit(0.04) }
+		elsif (world.map[cx][cy].tType = "blank") { player.onWater = true }
+	}
+	if (player.onWater != wasWater) { playSound("splash.wav") }
+	# movement code
+	var moving = false
+	var dir = 0
+	var superFaceX = 0
+	var superFaceY = 0
+	if (keyDown("up")) {
+		player.yspd = 0 - SPD
+		dir = 1
+		superFaceY = -1
+		moving = true
+	} elsif (keyDown("down")) {
+		player.yspd = SPD
+		dir = 2
+		superFaceY = 1
+		moving = true
+	} else { player.yspd = 0 }
+	if (keyDown("left")) {
+		player.xspd = 0 - SPD
+		player.facing = false
+		dir = 3
+		superFaceX = 1
+		moving = true
+	} elsif (keyDown("right")) {
+		player.xspd = SPD
+		player.facing = true
+		dir = 4
+		superFaceX = 1
+		moving = true
+	} else { player.xspd = 0 }
+	player.moving = moving
+	player.dir = dir
+	# check direction facing for aim purposes
+	var superFace = -1
+	if (superFaceX = 1) {
+		if (superFaceY = -1) { superFace = 4 }
+		elsif (superFaceY = 1) { superFace = 1 }
+		else { superFace = 0 }
+	} elsif (superFaceY = -1) { superFace = 3 }
+	elsif (superFaceY = 1) { superFace = 2 }
+	if (superFace != -1) { player.superFace = superFace }
+	# action (boomerang)
+	if (keyPress("a") && world.boomCount < boomMax(world)) {
+		playSound("b_throw.wav")
+		var newObj = newGameObj("BOOMER")
+		var BSPD = 320
+		# get x speed
+		var fx = -1
+		if (player.superFace = 3 || player.superFace = 2) { fx = 0 }
+		elsif (player.facing) { fx = 1 }
+		newObj.ixspd = fx * BSPD
+		# get y speed
+		var fy = 0
+		if (player.superFace = 3 || player.superFace = 4) { fy = -1 }
+		elsif (player.superFace = 1 || player.superFace = 2) { fy = 1 }
+		newObj.iyspd = fy * BSPD
+		# adjust speed on diagonal
+		if (fx != 0 && fy != 0) {
+			newObj.ixspd = round(newObj.ixspd * 0.7071)
+			newObj.iyspd = round(newObj.iyspd * 0.7071)
+		}
+		newObj.ixspd = newObj.ixspd + round(player.xspd * 0.7)
+		newObj.iyspd = newObj.iyspd + round(player.yspd * 0.5)
+		#if (player.facing = false) { newObj.ixspd = -320 }
+		#newObj.ixspd = newObj.ixspd + player.xspd
+		#newObj.iyspd = player.yspd
+		newObj.target = player
+		initPrecPos(newObj, centerX(player.hitbox), player.hitbox.y + 128, player.hitbox.z)
+		world.objList.add(newObj)
+	}
+	# action (b button)
+	player.actId = 0
+	var npcActive = false
+	if (player.npcObj != null) {
+		if (player.npcObj.nType != "chest") { npcActive = true }
+		elsif (player.npcObj.isOpen = false) { npcActive = true }
+	}
+	if (npcActive) {
+		player.actId = 1
+		if (player.npcObj.nType = "chest") { player.actId = 2 }
+		if (keyPress("b")) {
+			world.dFlag = true
+			world.dType = player.npcObj.nType
+			world.dId = player.npcObj.npcId
+			if (world.dType = "chest") {
+				player.npcObj.isOpen = true
+			}
+		}
+		player.npcObj = null
+	} elsif (keyPress("b") && player.actDelayTime = 0 && world.flagList.bomb && player.mp > 300) {
+		playSound("icicle.wav")
+		var newObj = newGameObj("BOMB")
+		initPrecPos(newObj, centerX(player.hitbox) - (newObj.hitbox.width / 2), centerY(player.hitbox), player.hitbox.z)
+		if (isInWall(world, newObj)) { newObj.hitbox.y = newObj.hitbox.y - toUnit(1) }
+		world.objList.add(newObj)
+		player.actDelayTime = 30
+		player.mp = player.mp - 300
+	}
+	# action (time stop)
+	if (keyDown("c") && world.flagList.time && player.decay = false) {
+		world.timeSlow = true
+		player.mp = player.mp - 3
+		if (player.mp <= 0) {
+			player.decay = true
+			playSound("explode.wav")
+		}
+	} else {
+		world.timeSlow = false
+		if (player.mp < 1500) { player.mp = player.mp + 1 }
+	}
+	# block check
+	if (world.flagList.push) {
+		blockCheck(world, player)
+	}
+}
+
+func scenePlayer(world, player)
+{
+	var sList = []
+	# draw block if pushing
+	if (player.pushState.active) {
+		sList.add(offset:(fromUnitf(player.pushState.x), 0 - fromUnitf(player.hitbox.z), fromUnitf(player.pushState.y),
+			meshBlock()))
+	}
+	# calculate invincibility frames
+	if (player.inv.time > 0) {
+		var invFrame = ((getTime() + 100) / 200) % 2
+		if (invFrame = 1) { return list:(sList) }
+	}
+	# check if on water
+	var onWater = false
+	var cx = fromUnit(centerX(player.hitbox))
+	var cy = fromUnit(centerY(player.hitbox))
+	if (oobMap(world.map, cx, cy) || world.map[cx][cy].tType = "blank") { onWater = true }
+	# calculate frame
+	var frame = 1
+	if (onWater = false && player.moving) {
+		var walkCycle = (getTime() / 200) % 3
+		frame = walkCycle + 1
+		#if (walkCycle = 1) { frame = 2 }
+		#elsif (walkCycle = 3) { frame = 3 }
+	}
+	frame = frame + (player.superFace * 3)
+	# print raft + player
+	var h = 0 - fromUnitf(player.hitbox.z)
+	var px = fromUnitf(player.hitbox.x)
+	var py = fromUnitf(player.hitbox.y + 1)
+	if (onWater) {
+		h = world.wh - 1.01
+		sList.add(offset:(px - 0.25, h + 1, py - 0.5, mesh:("raft", "raft", [0])))
+	}
+	sList.add(offset:(px, h, py, sprite:("may", frame, player.facing)))
+	return list:(sList)
+}

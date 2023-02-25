@@ -1,0 +1,282 @@
+
+func tarSpd(b1, b2, spd) {
+	var xd = centerX(b2) - centerX(b1)
+	var yd = centerY(b2) - centerY(b1)
+	var angle = atan2(xd, yd)
+	return (round(cos(angle) * spd), round(sin(angle) * spd))
+}
+
+var critState = {
+	init: fn(world, obj) {},
+	anim: fn(obj) {
+		if (obj.groundFlag) { return "idle" }
+		elsif (obj.zspd > 0) { return "jump" }
+		return "fall"
+	},
+	motion: fn(world, obj) {
+		if (obj.time = 0 && obj.groundFlag) {
+			playSound("enemy_jump.wav")
+			obj.zspd = rndRange(270, 50)
+			obj.time = rndRange(45, 120)
+			if (rndChance(2, 3)) {
+				var (xspd, yspd) = tarSpd(obj.hitbox, world.player.hitbox, 180)
+				obj.xspd = xspd
+				obj.yspd = yspd
+			} else {
+				var angle = rndRange(0, 360)
+				obj.xspd = round(cos(angle) * 180) 
+				obj.yspd = round(sin(angle) * 180)
+			}
+			if (obj.xspd < 0) { obj.facing = false }
+			else { obj.facing = true }
+		}
+		if (obj.groundFlag = false) {
+			obj.zspd = obj.zspd - 20
+		} elsif (obj.zspd < 0) {
+			obj.xspd = 0
+			obj.yspd = 0
+		}
+	}
+}
+
+var shuffleState = {
+	init: fn(world, obj) {
+		obj.shootFace = 0
+	},
+	anim: fn(obj) {	return "idle" },
+	motion: fn(world, obj) {
+		# main behavior
+		if (obj.wallFlag || obj.time = 0) {
+			if (rndChance(1, 2)) {
+				obj.xspd = rndNeg(rndRange(40, 40))
+				obj.yspd = 0
+			} else {
+				obj.xspd = 0
+				obj.yspd = rndNeg(rndRange(40, 40))
+			}
+			obj.time = rndRange(45, 120)
+		}
+		# animation flags
+		if (obj.xspd < 0) { obj.facing = false }
+		elsif (obj.xspd > 0) { obj.facing = true }
+		if (obj.yspd < 0) {
+			obj.variant = 6
+			obj.shootFace = 1
+		}
+		elsif (obj.yspd > 0) {
+			obj.variant = 3
+			obj.shootFace = 2
+		}
+		else {
+			obj.variant = 0
+			obj.shootFace = 0
+		}
+		# jelly specific behavior
+		if (obj.name = "JELLY" || obj.name = "JEL_S") {
+			obj.zAngle = sin(360 * flDiv(getTime() % 2000, 2000)) * 4
+		}
+		# fall
+		if (obj.groundFlag = false) {
+			obj.zspd = obj.zspd - 8
+		}
+	}
+}
+
+var bounceState = {
+	init: fn(world, obj) {
+		obj.xspd = rndNeg(100)
+		obj.yspd = rndNeg(100)
+	},
+	anim: fn(obj) { return "idle" },
+	motion: fn(world, obj) {
+		if (obj.wallX && obj.time = 0) {
+			playSound("sparky.wav")
+			obj.xspd = 0 - obj.xspd
+			obj.time = 2
+		} elsif (obj.wallY && obj.time = 0) {
+			playSound("sparky.wav")
+			obj.yspd = 0 - obj.yspd
+			obj.time = 2
+		}
+	}
+}
+
+var phaseState = {
+	init: fn(world, obj) {
+		obj.phase = false
+		obj.phaseTime = 0
+	},
+	anim: fn(obj) { return "na" },
+	motion: fn(world, obj) {
+		if (obj.phaseTime > 0) {
+			obj.phaseTime = obj.phaseTime - 1
+		} elsif (obj.phaseTime = 0) {
+			obj.phase = (obj.phase = false)
+			obj.phaseTime = rndRange(180, 60)
+		}
+		if (obj.phase && obj.alpha > 0.5) {
+			obj.alpha = obj.alpha - 0.05
+			if (obj.alpha < 0.5) { obj.alpha = 0.5 }
+		} elsif (obj.phase = false && obj.alpha < 1.0) {
+			obj.alpha = obj.alpha + 0.05
+			if (obj.alpha > 1.0) { obj.alpha = 1.0 }
+		}
+	}
+}
+
+var shootState = {
+	init: fn(world, obj) {
+		obj.shootTime = rndRange(60, 200)
+	},
+	anim: fn(obj) { return "na" },
+	motion: fn(world, obj) {
+		if (obj.shootTime > 0) { obj.shootTime = obj.shootTime - 1 }
+		else {
+			var xspd = -150
+			var yspd = 0
+			if (obj.shootFace = 0 && obj.facing) { xspd = 150 }
+			elsif (obj.shootFace = 1) {
+				xspd = 0
+				yspd = -150
+			} elsif (obj.shootFace = 2) {
+				xspd = 0
+				yspd = 150
+			}
+			var newObj = newGameObj("ENERGY")
+			newObj.xspd = xspd
+			newObj.yspd = yspd
+			newObj.evilFlag = true
+			newObj.time = 1000
+			initPrecPos(newObj, obj.hitbox.x, obj.hitbox.y + 10, obj.hitbox.z)
+			world.objList.add(newObj)
+			obj.shootTime = rndRange(60, 120)
+			playSound("enemy_shoot.wav")
+		}
+	}
+}
+
+var boomShootState = {
+	init: fn(world, obj) {
+		obj.shootTime = rndRange(60, 200)
+	},
+	anim: fn(obj) { return "na" },
+	motion: fn(world, obj) {
+		if (obj.shootTime > 0) { obj.shootTime = obj.shootTime - 1 }
+		else {
+			var (xspd, yspd) = tarSpd(obj.hitbox, world.player.hitbox, 400)
+			for (i in 0 to 1) {
+				var newObj = newGameObj("BOOMER_X")
+				newObj.ixspd = xspd + obj.xspd + rndNeg(rndRange(0, 60))
+				newObj.iyspd = yspd + obj.yspd + rndNeg(rndRange(0, 60))
+				newObj.target = obj
+				newObj.evilFlag = true
+				initPrecPos(newObj, obj.hitbox.x, obj.hitbox.y + 10, obj.hitbox.z)
+				world.objList.add(newObj)
+				playSound("k_throw.wav")
+			}
+			obj.shootTime = rndRange(150, 90)
+		}
+	}
+}
+
+var wizzState = {
+	init: fn(world, obj) {
+		obj.subState = "vanish"
+		obj.time = rndRange(60, 100)
+	},
+	anim: fn(obj) {
+		if (obj.subState = "fire") { return "fire" }
+		return "idle"
+	},
+	motion: fn(world, obj) {
+		if (obj.subState = "vanish") {
+			if (obj.alpha > 0) { obj.alpha = obj.alpha - 0.02 }
+			else { obj.alpha = 0 }
+			if (obj.time = 0) {
+				obj.subState = "reapp"
+				var (tx, ty) = findTileNearPlayer(world, 5, 2)
+				initPos(world.map, obj, tx, ty)
+			}
+		} elsif (obj.subState = "reapp") {
+			if (obj.alpha < 1) { obj.alpha = obj.alpha + 0.04 }
+			else {
+				# move to fire state
+				obj.time = 120
+				obj.subState = "fire"
+				obj.alpha = 1 
+			}
+		} elsif (obj.subState = "fire") {
+			if (obj.time = 100) {
+				# add energy blast
+				var (xspd, yspd) = tarSpd(obj.hitbox, world.player.hitbox, 120)
+				var newObj = newGameObj("ENERGY")
+				newObj.xspd = xspd
+				newObj.yspd = yspd
+				newObj.evilFlag = true
+				newObj.time = 1000
+				initPrecPos(newObj, obj.hitbox.x, obj.hitbox.y + 10, obj.hitbox.z)
+				world.objList.add(newObj)
+				playSound("enemy_charge.wav")
+			} elsif (obj.time = 0) {
+				obj.time = rndRange(60, 100)
+				obj.subState = "vanish"
+			}
+		}
+	}
+}
+
+var ratState = {
+	init: fn(world, obj) {
+		obj.xspd = -150
+		obj.spawnTime = 100
+		obj.roarTime = rndRange(100, 200)
+	},
+	anim: fn(obj) {	return "run" },
+	motion: fn(world, obj) {
+		if (obj.xspd < 0) { obj.facing = false }
+		elsif (obj.xspd > 0) { obj.facing = true }
+		if (obj.spawnTime > 0) { obj.spawnTime = obj.spawnTime - 1 }
+		else {
+			if (world.activeEnemyCount < 5) {
+				var nType = "CRIT"
+				if (obj.health <= 15 && world.wizzyCount < 1) {
+					nType = "WIZZY"
+				} if (obj.health <= 30) {
+					if (rndChance(1, 3)) { nType = "CRIT_B" }
+				}
+				var newObj = newGameObj(nType)
+				initPos(world.map, newObj, fromUnit(centerX(obj.hitbox)), fromUnit(centerY(obj.hitbox)))
+				explode(world, newObj)
+				world.objList.add(newObj)
+				playSound("explode.wav")
+			}
+			obj.spawnTime = rndRange(100, 300)
+		}
+		if (obj.roarTime > 0) { obj.roarTime = obj.roarTime - 1 }
+		else {
+			playSound("roar.wav")
+			obj.roarTime = rndRange(120, 300)
+		}
+	}
+}
+
+var corpseState = {
+	init: fn(world, obj) {
+		obj.delayTime = 0
+	},
+	anim: fn(obj) { return "bad" },
+	motion: fn(world, obj) {
+		damageMeta(obj.enemyMeta)
+		if (obj.time = 0) {
+			for (i in 0 to 1) {
+				var cx = centerX(obj.hitbox) + fromUnitf(rndNeg(rndRange(0, 1024)))
+				var cy = centerY(obj.hitbox)
+				explodeAt(world, cx, cy, obj.hitbox.z + 0.5, false)
+				playSound("explode.wav")
+			}
+			obj.time = 30
+		}
+		obj.delayTime = obj.delayTime + 1
+		if (obj.delayTime > 155) { obj.decay = true }
+	}
+}

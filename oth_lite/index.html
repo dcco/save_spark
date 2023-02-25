@@ -1,0 +1,25 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8"> <title>john lasers lee</title>
+	<script type="text/javascript" src="bin/require.js"></script>
+	<script type="text/javascript" src="bin/mylexer.js"></script>
+	<script type="text/javascript" src="bin/bootstrap.js"></script>
+</head>
+<body>
+	<div id="page">
+		<div id="file-bar">
+		</div>
+		<div class="cpanel">
+			<canvas id="screen" width="800" height="600"></canvas>
+		</div>
+	</div>
+	<script>
+		requirejs.config({ baseUrl: 'bin' });
+		requirejs(["a/shell"], function(s) {
+			s.main("safari");
+		});
+	</script>
+</body>
+</html>

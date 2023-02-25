@@ -1,0 +1,35 @@
+
+func initVolume()
+{
+	return {
+		vTime: 0
+	}
+}
+
+func updateVolume(v)
+{
+	if (v.vTime > 0) { v.vTime = v.vTime - 1 }
+	if (keyDas("mode-left", 12, 3)) {
+		incVolume(-5)
+		v.vTime = 120
+	} elsif (keyDas("mode-right", 12, 3)) {
+		incVolume(5)
+		v.vTime = 120
+	}
+}
+
+func sceneVolume(v)
+{
+	if (v.vTime = 0) { return nop:() }
+	# actual volume control
+	var sList = []
+	sList.add(box:((0, 0, 0), 1, (0, 0, 31, 6)))
+	var vol = getVolume()
+	var vt = padCoin(vol)
+	sList.add(text:(2, 1, "VOL " + vt))
+	# alpha
+	var alpha = flDiv(40 - v.vTime, 40)
+	if (alpha > 1) { alpha = 1 }
+	alpha = 1 - alpha 
+	return color4:((255, 255, 255), alpha, offset:(228, 8, list:(sList)))
+}

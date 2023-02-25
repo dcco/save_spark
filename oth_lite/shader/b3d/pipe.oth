@@ -1,0 +1,230 @@
+
+var shadowBuf = newFrameBuffer({
+	name: "shadow",
+	size: (2048, 2048),
+	backingList: [depth:("shadow")],
+	attrList: {
+		pos: "aPos",
+		tex: "aVertexUV"
+	},
+	uniformList: {
+		objMat: "uObjMatrix",
+		modelMat: "lightMVMatrix",
+		persMat: "uPMatrix",
+		sampler: "uSampler",
+		spriteFlag: "spFlag",
+		extra: [ "uMVMatrix" ],
+		flagList: [ "isBack" ]
+	}
+})
+
+var geoBuf = newFrameBuffer({
+	name: "geometry",
+	size: (settings.width, settings.height),
+	backingList: [color:("pos"), color:("norm"), color:("color"),
+		color:("spec"), color:("bright"), render:()],
+	attrList: {
+		pos: "aVertexPosition",
+		tex: "aVertexUV",
+		norm: "aVertexNormal"
+	},
+	uniformList: {
+		objMat: "uObjMatrix",
+		modelMat: "uMVMatrix",
+		persMat: "uPMatrix",
+		sampler: "uSampler",
+		extra: [ "lightPMatrix", "lightMVMatrix", "uGlow" ],
+		flagList: [ "isBack", "uBright", "bloomFlag" ]
+	},
+	uTexList: [ "uSampler", "uShadowMap" ]
+})
+
+var blurBuf = newFrameBuffer({
+	name: "blur",
+	size: (settings.width, settings.height),
+	backingList: [color:("blur1"), altColor:("blur2")],
+	attrList: {
+		pos: "aPos",
+		tex: "aTexCoord"
+	},
+	uniformList: {
+		extra: [ "passFlag" ]
+	},
+	uTexList: [ "gColor", "gSpec" ]
+})
+
+var ssaoBuf = newFrameBuffer({
+	name: "ssao",
+	size: (settings.width, settings.height),
+	backingList: [color:("ssao")],
+	attrList: {
+		pos: "aPos",
+		tex: "aTexCoord"
+	},
+	uniformList: {
+		persMat: "uPMatrix"
+	},
+	uTexList: [ "gPos", "gNormal", "texNoise" ]
+})
+
+var lightShader = newShader({
+	name: "light",
+	attrList: {
+		pos: "aPos",
+		tex: "aTexCoord"
+	},
+	uniformList: {
+		extra: [ "uGlow",
+			"tintFlag", "lightFlag", "bloomFlag",
+			"fragmentFlag", "wtfFlag", "noiseFlag",
+			"xFlag", "noiseSeed" ]
+	},
+	uTexList: [ "gPos", "gNormal", "gColor", "gSpec", "occlusion", "blur" ]
+})
+
+func lerp(a, b, r) {
+	return a + (r * (b - a))
+}
+
+func iData() {
+	# standard matrices
+	var idMat = newMat()
+	var pMat = frustumMat(-0.075, 0.075, 0.05, -0.05, 0.1, 100)
+
+	# shadow matrices
+	var lightPos = newVec3(-12f, -30f, -30f)
+	var targetPos = newVec3(0f, 0f, -10f)
+	var lMat = lookAtMat(lightPos, targetPos, newVec3(0f, 1f, 0f))
+
+	# ssao samples
+	var sampleList = []
+	for (i in 0 to 63) {
+		var v = newVec3((rndGet() * 2) - 1, (rndGet() * 2) - 1, rndGet())
+		var r = flDiv(i, 64)
+		v.normalize()
+		v.scale(lerp(0.1, 1.0, r * r))
+		sampleList.add(v)
+	}
+
+	# ssao noise texture
+	var noiseList = []
+	for (i in 0 to 15) {
+		noiseList.add((rndGet() * 2) - 1)
+		noiseList.add((rndGet() * 2) - 1)
+		noiseList.add(0)
+		noiseList.add(1)
+	}
+	var noiseTex = fixedTexImage([4, 4], noiseList)
+
+	return {
+		idMat: idMat,
+		pMat: pMat,
+		lMat: lMat,
+		sampleList: sampleList,
+		noiseTex: noiseTex
+	}
+}
+
+func blurSeqPass(cont, idMat, curName, prevName) {
+	cont.meshDraw(buf:(blurBuf), idMat, idMat, "screen", square:(), {
+			uArgs: [
+				["passFlag", "1f", 1.0]
+			],
+			loadTex: [
+				["buffer", blurBuf, prevName, 0]
+			],
+			switch: {
+				start: false,
+				bufList: [curName]
+			}
+		})
+}
+
+func render(cont, mvMat, scene) {
+	var rFlags = cont.renderFlags
+	var idMat = cont.idMat
+	var pMat = cont.pMat
+	var oMat = pMat
+	var lMat = cont.lMat
+
+	# shadow + geometry passes
+	cont.bufferDraw(shadowBuf, oMat, lMat, scene, {
+			uArgs: [
+				["uMVMatrix", "mat", mvMat]
+			],
+			flagArgs: [
+				["isBack", "1f", 0.0]
+			],
+			shadowFlag: true
+		})
+	cont.bufferDraw(geoBuf, pMat, mvMat, scene, {
+			uArgs: [
+				["lightPMatrix", "mat", oMat],
+				["lightMVMatrix", "mat", lMat],
+				["uGlow", "1f", rFlags.glow],
+				["bloomFlag", "1f", rFlags.bloomFlag]
+			],
+			flagArgs: [
+				["isBack", "1f", 0.0],
+				["uBright", "1f", 0.0]
+			],
+			loadTex: [
+				["buffer", shadowBuf, "shadow", 1]
+			]
+		})
+
+	# blur for bloom passes
+	cont.meshDraw(buf:(blurBuf), idMat, idMat, "screen", square:(), {
+			uArgs: [
+				["passFlag", "1f", 0.0]
+			],
+			loadTex: [
+				["buffer", geoBuf, "bright", 0],
+				["buffer", geoBuf, "spec", 1]
+			],
+			switch: {
+				start: true,
+				bufList: ["blur1"]
+			}
+		})
+	blurSeqPass(cont, idMat, "blur2", "blur1")
+	for (i in 0 to 1) {
+		blurSeqPass(cont, idMat, "blur1", "blur2")
+		blurSeqPass(cont, idMat, "blur2", "blur1")
+	}
+
+	# ssao pass
+	cont.meshDraw(buf:(ssaoBuf), pMat, idMat, "screen", square:(), {
+			uArgs: [
+				["samples", "3f-list", cont.sampleList]
+			],
+			loadTex: [
+				["buffer", geoBuf, "pos", 0],
+				["buffer", geoBuf, "norm", 1],
+				["tex", cont.noiseTex, 2]
+			]
+		})
+
+	# final display
+	cont.meshDraw(shader:(lightShader), idMat, idMat, "screen", square:(), {
+			uArgs: [
+				["uGlow", "1f", rFlags.glow],
+				["tintFlag", "1f", rFlags.tintFlag],
+				["lightFlag", "1f", rFlags.lightFlag],
+				["bloomFlag", "1f", rFlags.bloomFlag],
+				["fragmentFlag", "1f", rFlags.fragFlag],
+				["wtfFlag", "1f", rFlags.wtfFlag],
+				["noiseFlag", "1f", rFlags.noiseFlag],
+				["xFlag", "1f", rFlags.xFlag],
+				["noiseSeed", "1f", rFlags.noiseSeed]
+			],
+			loadTex: [
+				["buffer", geoBuf, "pos", 0],
+				["buffer", geoBuf, "norm", 1],
+				["buffer", geoBuf, "color", 2],
+				["buffer", geoBuf, "spec", 3],
+				["buffer", ssaoBuf, "ssao", 4],
+				["buffer", blurBuf, "blur1", 5]
+			]
+		})
+}

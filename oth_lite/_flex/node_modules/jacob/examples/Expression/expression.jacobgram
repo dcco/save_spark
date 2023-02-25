@@ -1,0 +1,32 @@
+%left 'PLUS' '-'
+%left '*' '/'
+
+Program = { Statement } function(){};
+
+Statement = 'id' '=' Expression function(id,_, exp){this[id] = exp;}
+            | 'print' Expression function(_,exp){ console.log(exp);} ;
+
+Expression = Expression 'PLUS' Expression  function (e1, _, e2) {
+                                                             return e1 + e2;
+                                                         }
+            | Expression '-' Expression function (e1, _, e2) {
+                                                              return e1 - e2;
+                                                          }
+            | Expression '*' Expression function (e1, _, e2) {
+                                                             return e1 * e2;
+                                                         }
+             | Expression '/' Expression function (e1, _, e2) {
+                                                               return e1 / e2;
+                                                           }
+             | 'integer'  function (i) {
+                                             return i;
+                                         }
+             | 'id'  function (id) {
+                                        return this[id];
+                                    }
+             | '(' Expression ')'   function (_, e) {
+                                                         return e;
+                                                     }
+
+
+;

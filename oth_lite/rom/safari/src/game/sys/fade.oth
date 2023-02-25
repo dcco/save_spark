@@ -1,0 +1,46 @@
+
+func initFade() {
+	return {
+		fade: 0,
+		targetFade: 0
+	}
+}
+
+func fDist(i, j) {
+	if (i < j) { return j - i - 1 }
+	return i - j
+}
+
+func blackFade(fade) {
+	return fade.fade = 64
+}
+
+func closeFade(fade) {
+	fade.targetFade = 64
+}
+
+func openFade(fade) {
+	fade.targetFade = 0
+}
+
+func updateFade(fade) {
+	if (fade.fade < fade.targetFade) { fade.fade = fade.fade + 1 }
+	elsif (fade.fade > fade.targetFade) { fade.fade = fade.fade - 1 }
+}
+
+func sceneFade(fade) {
+	if (fade.fade = 0) { return nop:() }
+	var sList = []
+	var SX = 34
+	var SY = 25
+	for (i in 0 to SX - 1; j in 0 to SY - 1)
+	{
+		var dist = fDist(i, SX / 2) + fDist(j, SY / 2)
+		var frame = 5 - ((dist - 48) + fade.fade)
+		var xFrame = frame
+		if (frame < 0) { xFrame = 0 }
+		elsif (frame > 5) { xFrame = 5 }
+		sList.add(offset:((i * 8) - 1, j * 8, sprite:("wipe", xFrame, false)))
+	}
+	return list:(sList)
+}

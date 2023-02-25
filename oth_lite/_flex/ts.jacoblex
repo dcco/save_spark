@@ -1,0 +1,144 @@
+
+%moduleName MyLexer
+
+%%
+
+digit = [0-9]
+id = (_?[a-zA-Z][a-zA-Z_0-9]*)
+opchar = [+\-\*/%:<>=&\|!\^]
+
+%%
+
+<>\" {
+    this.sBuild = '';
+    this.pushState('STRLIT');
+}
+
+<>\(\* {
+    if (this.pDepth === undefined) {
+        this.pDepth = 0;
+    }
+    this.pDepth = this.pDepth + 1;
+    this.pushState('COMMENT');
+}
+
+<># {
+    this.pushState('COMMENT_LINE');
+}
+
+<>\( { return 'lparen'; }
+<>\) { return 'rparen'; }
+<>\[ { return 'lbrace'; }
+<>\] { return 'rbrace'; }
+<>\{ { return 'lbrack'; }
+<>\} { return 'rbrack'; }
+<>; { return 'semic'; }
+<>, { return 'comma'; }
+<>_ { return 'blank'; }
+
+<>true { return 'true'; }
+<>false { return 'false'; }
+
+<>is { return 'is'; }
+<>if { return 'if'; }
+<>then { return 'then'; }
+<>else { return 'else'; }
+<>elsif { return 'elsif'; }
+<>for { return 'for'; }
+<>in { return 'in'; }
+<>to { return 'to'; }
+<>while { return 'while'; }
+<>return { return 'return'; }
+
+<>var { return 'var'; }
+<>func { return 'func'; }
+<>fn { return 'fn'; }
+
+<>\-?{digit}+ {
+    this.jjval = this.jjtext;
+    return 'int';    
+}
+
+<>\-?{digit}+(\.{digit}+)?f {
+    this.jjval = this.jjtext;
+    return 'float';    
+}
+
+<>\-?{digit}+\.{digit}+ {
+    this.jjval = this.jjtext;
+    return 'float';    
+}
+
+<>\. { return 'dot'; }
+
+<>= { return 'eq'; }
+
+<>: { return 'colon'; }
+
+<>{opchar}+ {
+    this.jjval = this.jjtext;
+    return 'xop';
+}
+
+<>{id} {
+    this.jjval = this.jjtext;
+    return 'id'; 
+}
+
+<>\n|\r {}
+<>. {}
+<>$ { return 'EOF'; }
+
+
+<COMMENT>\(\* {
+    this.pDepth = this.pDepth + 1;
+}
+<COMMENT>\*\) {
+    this.pDepth = this.pDepth - 1;
+    if (this.pDepth === 0) this.popState();
+}
+<COMMENT>\n|\r {}
+<COMMENT>. {}
+<COMMENT>$ { return 'EOF'; }
+
+<COMMENT_LINE>\n|\r { this.popState(); }
+<COMMENT_LINE>. {}
+<COMMENT_LINE>$ { return 'EOF'; }
+
+<STRLIT>\" {
+    this.jjval = this.sBuild;
+    this.popState();
+    return 'strlit';
+}
+
+<STRLIT>(\n|\r)\s* {}
+
+<STRLIT>\\\" {
+    this.sBuild = this.sBuild + '\"';
+}
+
+<STRLIT>\\n {
+    this.sBuild = this.sBuild + '\n';
+}
+
+<STRLIT>\\r {
+    this.sBuild = this.sBuild + '\r';
+}
+
+<STRLIT>\\t {
+    this.sBuild = this.sBuild + '\t';
+}
+
+<STRLIT>\\\\ {
+    this.sBuild = this.sBuild + '\\';
+}
+
+<STRLIT>\\u{digit}{digit}{digit} {
+    this.sBuild = this.sBuild + String.fromCharCode(2, 5);
+}
+
+<STRLIT>. {
+    this.sBuild = this.sBuild + this.jjtext;
+}
+
+<STRLIT>$ { return 'EOF'; }

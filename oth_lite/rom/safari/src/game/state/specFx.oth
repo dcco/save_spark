@@ -1,0 +1,55 @@
+
+func explodeAt(world, cx, cy, z, groundFlag) {
+	for (i in 0 to 5) {
+		var newObj = newGameObj("EXPLODE")
+		# randomize speed
+		var dx = rndNeg(rndRange(0, 100))
+		var dy = rndNeg(rndRange(0, 100))
+		var dz = rndRange(0, 100)
+		if (groundFlag = false) { dz = rndNeg(dz) }
+		var mag = sqrt((dx * dx) + (dy * dy) + (dz * dz))
+		# calc speed
+		var rMag = rndRange(200, 100)
+		newObj.xspd = (dx * rMag) / mag
+		newObj.yspd = (dy * rMag) / mag
+		newObj.zspd = (dz * rMag) / mag
+		# set decay timer
+		newObj.time = 200
+		# place in the world
+		initPrecPos(newObj, cx - (newObj.hitbox.width / 2), cy - (newObj.hitbox.height / 2), z)
+		world.objList.add(newObj)
+	}
+}
+
+func explode(world, obj) {
+	var cx = centerX(obj.hitbox)
+	var cy = centerY(obj.hitbox)
+	explodeAt(world, cx, cy, obj.hitbox.z, obj.groundFlag)
+}
+
+func damagePlayer(player, d) {
+	if (player.inv.time > 0) { return }
+	var spd = 400
+	if (player.facing) { spd = -400 }
+	setImpulse(player, spd, 0, 0.9)
+	player.inv.time = 150
+	player.health = player.health - d
+	if (player.health <= 0) {
+		player.health = 0
+		player.decay = true
+		playSound("enemy_die.wav")
+	} else {
+		playSound("player_hurt.wav")
+	}
+}
+
+func damageEnemy(enemy, d) {
+	damageMeta(enemy.enemyMeta)
+	enemy.health = enemy.health - d
+	if (enemy.health <= 0) {
+		enemy.decay = true
+		playSound("enemy_die.wav")
+	} else {
+		playSound("enemy_hurt.wav")
+	}
+}

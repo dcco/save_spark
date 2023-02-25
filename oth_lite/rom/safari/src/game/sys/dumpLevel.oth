@@ -1,0 +1,82 @@
+
+func dlr1()
+{
+	var image = getImage("wmap")
+	var l = []
+	for (i in 0 to image.width - 1; j in 0 to image.height - 1) {
+		var px = image.pixel(i, j)
+		if (pixelMatch(px, colors.BLACK)) {
+			l.add(1)
+		} elsif (pixelMatch(px, colors.F_GRAY)) {
+			l.add(2)
+		} elsif (pixelMatch(px, colors.F_LGRAY)) {
+			l.add(3)
+		} elsif (pixelMatch(px, colors.F_RED)) {
+			l.add(4)
+		} elsif (pixelMatch(px, colors.F_BLUE)) {
+			l.add(5)
+		} elsif (pixelMatch(px, colors.F_GREEN)) {
+			l.add(6)
+		} elsif (pixelMatch(px, colors.F_YELLOW)) {
+			l.add(7)
+		} elsif (pixelMatch(px, colors.F_MAGENTA)) {
+			l.add(8)
+		} elsif (pixelMatch(px, colors.F_CYAN)) {
+			l.add(9)
+		} elsif (pixelMatch(px, colors.F_ORANGE)) {
+			l.add(10)
+		} elsif (pixelMatch(px, colors.P_ORANGE)) {
+			l.add(11)
+		} elsif (pixelMatch(px, colors.P_PURPLE)) {
+			l.add(12)
+		} elsif (pixelMatch(px, colors.P_PINK)) {
+			l.add(13)
+		} else {
+			l.add(0)
+		}
+	}
+	return l
+}
+
+func dlr2()
+{
+	var objMap = getImage("emap")
+	var objMap2 = getImage("emap2")
+	var l = []
+	for (i in 0 to objMap.width - 1; j in 0 to objMap2.height - 1) {
+		var px = objMap.pixel(i, j)
+		var px2 = objMap2.pixel(i, j)
+		if (pixelMatch(px, colors.F_RED)) {
+			l.add([1, i, j])
+		} elsif (pixelMatch(px, colors.F_GREEN)) {
+			l.add([2, i, j])
+		} elsif (pixelMatch(px, colors.F_YELLOW)) {
+			l.add([3, i, j])
+		} elsif (pixelMatch(px, colors.F_BLUE)) {
+			l.add([4, i, j])
+		} elsif (pixelMatch(px, colors.F_MAGENTA)) {
+			l.add([5, i, j])
+		} elsif (pixelMatch(px, colors.F_CYAN)) {
+			l.add([6, i, j])
+		} elsif (pixelMatch(px2, colors.F_RED)) {
+			l.add([7, i, j])
+		} elsif (pixelMatch(px2, colors.F_BLUE)) {
+			l.add([8, i, j])
+		} elsif (pixelMatch(px2, colors.F_MAGENTA)) {
+			l.add([9, i, j])
+		} elsif (pixelMatch(px2, colors.F_YELLOW)) {
+			l.add([10, i, j])
+		} elsif (pixelMatch(px2, colors.BLACK)) {
+			l.add([11, i, j])
+		}
+	}
+	return l
+}
+
+func dumpLevelRaw()
+{
+	var l1 = dlr1()
+	var l2 = dlr2()
+	debugLog(l1)
+	debugLog(l2)
+}

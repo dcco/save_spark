@@ -1,0 +1,47 @@
+
+func newBox(w, h)
+{
+	return {
+		x: 0,
+		y: 0,
+		z: 0,
+		width: w,
+		height: h
+	}
+}
+
+func overlapsBox(b1, b2) {
+	return b1.x < b2.x + b2.width && b2.x < b1.x + b1.width &&
+		b1.y < b2.y + b2.height && b2.y < b1.y + b1.height &&
+		b1.z < b2.z + 2048 && b2.z < b1.z + 2048
+}
+
+func overlapsBoxEx(b1, b2, ex, ey) {
+	return b1.x - ex < b2.x + b2.width && b2.x < b1.x + ex + b1.width &&
+		b1.y - ey < b2.y + b2.height && b2.y < b1.y + ey + b1.height &&
+		b1.z < b2.z + 2048 && b2.z < b1.z + 2048
+}
+
+func centerX(b) {
+	return b.x + (b.width / 2)
+}
+
+func centerY(b) {
+	return b.y + (b.height / 2)
+}
+
+func toUnit(i) {
+	return i * 2048
+}
+
+func fromUnit(i) {
+	return i / 2048
+}
+
+func fromUnitf(i) {
+	return flDiv(i, 2048)
+}
+
+func pxUnit(p) {
+	return p * 256
+}

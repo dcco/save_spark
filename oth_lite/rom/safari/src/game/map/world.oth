@@ -1,0 +1,225 @@
+
+func loadObjList(map, objList)
+{
+	var objMap = getImage("emap")
+	var objMap2 = getImage("emap2")
+	var npcId = 0
+	var chestId = 0
+	for (i in 0 to objMap.width - 1; j in 0 to objMap.height - 1) {
+		var px = objMap.pixel(i, j)
+		var px2 = objMap2.pixel(i, j)
+		var newObj = null
+		if (pixelMatch(px, colors.F_RED)) {
+			newObj = newGameObj("CRIT")
+		} elsif (pixelMatch(px, colors.F_GREEN)) {
+			newObj = newGameObj("JELLY")
+		} elsif (pixelMatch(px, colors.F_YELLOW)) {
+			newObj = newGameObj("CRIT_Y")
+		} elsif (pixelMatch(px, colors.F_BLUE)) {
+			newObj = newGameObj("CRIT_B")
+		} elsif (pixelMatch(px, colors.F_MAGENTA)) {
+			newObj = newGameObj("NPC")
+			newObj.npcId = npcId
+			newObj.variant = dData[npcId].variant * 2
+			npcId = npcId + 1
+		} elsif (pixelMatch(px, colors.F_CYAN)) {
+			newObj = newGameObj("CHEST")
+			newObj.npcId = chestId
+			chestId = chestId + 1
+		} elsif (pixelMatch(px2, colors.F_RED)) {
+			newObj = newGameObj("KNIGHT")
+		} elsif (pixelMatch(px2, colors.F_BLUE)) {
+			newObj = newGameObj("WIZZY")
+		} elsif (pixelMatch(px2, colors.F_MAGENTA)) {
+			newObj = newGameObj("KNIGHT_F")
+		} elsif (pixelMatch(px2, colors.F_YELLOW)) {
+			newObj = newGameObj("FRYBALL")
+		} elsif (pixelMatch(px2, colors.BLACK)) {
+			newObj = newGameObj("SPARK")
+		}
+		if (newObj != null) {
+			initPos(map, newObj, i, j)
+			objList.add(newObj)
+		}
+	}
+}
+
+func loadObjListAlt(map, objList)
+{
+	var npcId = 0
+	var chestId = 0
+	for (k in 0 to objectRaw.length - 1) {
+		var entry = objectRaw[k]
+		var px = entry[0]
+		var i = entry[1]
+		var j = entry[2]
+
+		var newObj = null
+		if (px = 1) {
+			newObj = newGameObj("CRIT")
+		} elsif (px = 2) {
+			newObj = newGameObj("JELLY")
+		} elsif (px = 3) {
+			newObj = newGameObj("CRIT_Y")
+		} elsif (px = 4) {
+			newObj = newGameObj("CRIT_B")
+		} elsif (px = 5) {
+			newObj = newGameObj("NPC")
+			newObj.npcId = npcId
+			newObj.variant = dData[npcId].variant * 2
+			npcId = npcId + 1
+		} elsif (px = 6) {
+			newObj = newGameObj("CHEST")
+			newObj.npcId = chestId
+			chestId = chestId + 1
+		} elsif (px = 7) {
+			newObj = newGameObj("KNIGHT")
+		} elsif (px = 8) {
+			newObj = newGameObj("WIZZY")
+		} elsif (px = 9) {
+			newObj = newGameObj("KNIGHT_F")
+		} elsif (px = 10) {
+			newObj = newGameObj("FRYBALL")
+		} elsif (px = 11) {
+			newObj = newGameObj("SPARK")
+		}
+		if (newObj != null) {
+			initPos(map, newObj, i, j)
+			objList.add(newObj)
+		}
+	}
+}
+
+func initWorld(flagList)
+{
+	var (map, startPos) = loadMap()
+	var player = initPlayer(map, startPos)
+	var objList = []
+	objList.add(player)
+	var coots = newGameObj("COOTS")
+	initPos(map, coots, startPos.1 + 1, startPos.2)
+	objList.add(coots)
+	if (HARDCODE_FLAG) { loadObjListAlt(map, objList) }
+	else { loadObjList(map, objList) }
+	if (flagList = null) { flagList = initFlagList() }
+	return {
+		map: map,
+		objList: objList,
+		flagList: flagList,
+		player: player,
+		boomCount: 0,
+		activeEnemyCount: 0,
+		wizzyCount: 0,
+		timeSlow: false,
+		timeFlag: false,
+		dFlag: false,
+		dType: "npc",
+		dId: -1,
+		noAct: false,
+		wh: 0.7,
+		boss: null,
+		win: false
+	}
+}
+
+func antiBlock(world)
+{
+	var player = world.player
+	var tx = fromUnit(centerX(player.hitbox))
+	var ty = fromUnit(centerY(player.hitbox))
+	var jl = [-15, -14, 14, 15]
+	for (i in -15 to 15; j in 0 to 3) {
+		var cx = tx + i
+		var cy = ty + jl[j]
+		if (oobMap(world.map, cx, cy) = false) {
+			world.map[cx][cy].spec = "none"
+			if (world.map[cx][cy].wasBlock) { world.map[cx][cy].spec = "block" }
+		}
+		var dx = tx + jl[j]
+		var dy = ty + i
+		if (oobMap(world.map, dx, dy) = false) {
+			world.map[dx][dy].spec = "none"
+			if (world.map[dx][dy].wasBlock) { world.map[dx][dy].spec = "block" }
+		}
+	}
+}
+
+func updateWorld(world)
+{
+	var player = world.player
+	updatePlayer(world, player)
+	#updateObj(world, player)
+	updateObjList(world)
+	antiBlock(world)
+	world.timeFlag = (world.timeFlag = false)
+}
+
+func sceneWater(world, cx, cy, sFrame)
+{
+	var sList = []
+	var frame = sFrame / 4
+	var h = 0.7 + (sin(sFrame * 15) * 0.03)
+	world.wh = h
+	for (i in 0 to 15; j in 0 to 15) {
+		sList.add(offset:(cx + (i * 4) - 20, h, cy + (j * 4) - 20, mesh:("water", "water", [frame])))
+	}
+	return list:(sList)
+}
+
+func sceneWorld(world)
+{
+	var player = world.player
+	var sList = []
+	# draw main map
+	var cx = fromUnit(centerX(player.hitbox))
+	var cy = fromUnit(centerY(player.hitbox))
+	sList.add(sceneMap(world.map, cx, cy))
+	# draw objects
+	sList.add(sceneObjList(world.objList))
+	if (player.decay = false) { sList.add(scenePlayer(world, player)) }
+	var wCycle = (getTime() / 125) % 24
+	sList.add(sceneWater(world, cx, cy, wCycle))
+	return offset:(0 - fromUnitf(player.hitbox.x), -1 + fromUnitf(player.hitbox.z), 0 - fromUnitf(player.hitbox.y), list:(sList))
+}
+
+func padCoin(i)
+{
+	if (i < 10) { return "  " + i }
+	elsif (i < 100) { return " " + i }
+	return "" + i
+}
+
+func hudWorld(world)
+{
+	var sList = []
+	# display hp + mp
+	sList.add(offset:(8, 8, image:("hud-main")))
+	var healthLen = (world.player.health * 19) / 10
+	if (healthLen < 0) { healthLen = 0 }
+	sList.add(box:((211, 67, 108), 1, (19, 10, healthLen, 4)))
+	var mpLen = (world.player.mp * 19) / 1500
+	if (mpLen < 0) { mpLen = 0 }
+	sList.add(box:((122, 97, 160), 1, (19, 15, mpLen, 4)))
+	# display coin counter
+	sList.add(offset:(8, 24, image:("hud-coin")))
+	sList.add(text:(18, 26, padCoin(world.flagList.coin)))
+	# display action
+	#sList.add(offset:(44, 8, image:("hud-act")))
+	#sList.add(offset:(46, 9, sprite:("hud-icon", 0, false)))
+	if (world.noAct = false) {
+		if (world.player.actId != 0) {
+			sList.add(box:((0, 0, 0), 1, (114, 150, 39, 6)))
+			var actName = "TALK"
+			if (world.player.actId = 2) { actName = "OPEN" }
+			sList.add(text:(116, 151, "K TO " + actName))
+		}
+	}
+	# display boss information
+	if (world.boss != null && world.boss.health > 0) {
+		sList.add(offset:(57, 170, image:("boss-meter")))
+		var bossLen = (world.boss.health * 116) / world.boss.maxHealth
+		if (bossLen < 0) { bossLen = 0 }
+		sList.add(box:((211, 67, 108), 1, (89, 172, bossLen, 4)))
+	}
+	return list:(sList)
+}

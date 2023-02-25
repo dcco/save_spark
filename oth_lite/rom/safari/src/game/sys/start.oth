@@ -1,0 +1,11 @@
+
+func sceneStart()
+{
+	var sList = []
+	sList.add(image:("start"))
+	if ((getTime() / 800) % 2 = 0) {
+		sList.add(box:((0, 0, 0), 1, (109, 140, 48, 6)))
+		sList.add(text:(111, 141, "PRESS ENTER"))
+	}
+	return list:(sList)
+}

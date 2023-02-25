@@ -1,0 +1,39 @@
+
+[{
+	"name": "commons",
+	"modList": [
+		{
+			"name": "data",
+			"fileList": ["hitbox"]
+		}
+	]
+}, {
+	"name": "game",
+	"modList": [
+		{
+			"name": "data",
+			"fileList": ["diaRaw", "levelRaw", "objectRaw"]
+		},
+		{
+			"name": "state",
+			"fileList": ["specFx", "genState", "cootsState", "enemyState", "projState", "interState", "stateTable"]
+		},
+		{
+			"name": "map",
+			"fileList": ["map", "animTable", "index", "flagList",
+				"enemyMeta", "gameObj", "objList", "player", "world"]
+		},
+		{
+			"name": "sys",
+			"fileList": ["start", "pause", "dialogue", "dumpLevel", "fade", "win", "volume", "system"]
+		}
+	]
+}, {
+	"name": "top",
+	"modList": [
+		{
+			"name": "main",
+			"fileList": ["main"]
+		}
+	]
+}]

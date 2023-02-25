@@ -1,0 +1,162 @@
+
+var shadowBuf = newFrameBuffer({
+	name: "shadow",
+	size: (2048, 2048),
+	backingList: [depth:("shadow")],
+	attrList: {
+		pos: "aPos",
+		tex: "aVertexUV"
+	},
+	uniformList: {
+		objMat: "uObjMatrix",
+		modelMat: "lightMVMatrix",
+		persMat: "uPMatrix",
+		sampler: "uSampler",
+		spriteFlag: "spFlag",
+		extra: [ "uMVMatrix" ]
+	}
+})
+
+var geoBuf = newFrameBuffer({
+	name: "geometry",
+	size: (settings.width, settings.height),
+	backingList: [color:("pos"), color:("norm"), color:("color"),
+		color:("spec"), color:("bright"), render:()],
+	attrList: {
+		pos: "aVertexPosition",
+		tex: "aVertexUV",
+		norm: "aVertexNormal"
+	},
+	uniformList: {
+		objMat: "uObjMatrix",
+		modelMat: "uMVMatrix",
+		persMat: "uPMatrix",
+		sampler: "uSampler",
+		color: "uColor",
+		extra: [ "lightPMatrix", "lightMVMatrix" ]
+	},
+	uTexList: [ "uSampler", "uShadowMap" ]
+})
+
+var ssaoBuf = newFrameBuffer({
+	name: "ssao",
+	size: (settings.width, settings.height),
+	backingList: [color:("ssao")],
+	attrList: {
+		pos: "aPos",
+		tex: "aTexCoord"
+	},
+	uniformList: {
+		persMat: "uPMatrix"
+	},
+	uTexList: [ "gPos", "gNormal", "texNoise" ]
+})
+
+var lightShader = newShader({
+	name: "light",
+	attrList: {
+		pos: "aPos",
+		tex: "aTexCoord"
+	},
+	uniformList: {
+		extra: [ "noiseFlag", "noiseSeed" ]
+	},
+	uTexList: [ "gPos", "gNormal", "gColor", "gSpec", "occlusion" ]
+})
+
+func lerp(a, b, r) {
+	return a + (r * (b - a))
+}
+
+func iData() {
+	# standard matrices
+	var idMat = newMat()
+	var pMat = frustumMat(-0.075, 0.075, 0.05, -0.05, 0.1, 100)
+
+	# shadow matrices
+	var lightPos = newVec3(-12f, -30f, -30f)
+	var targetPos = newVec3(0f, 0f, -10f)
+	var lMat = lookAtMat(lightPos, targetPos, newVec3(0f, 1f, 0f))
+
+	# ssao samples
+	var sampleList = []
+	for (i in 0 to 63) {
+		var v = newVec3((rndGet() * 2) - 1, (rndGet() * 2) - 1, rndGet())
+		var r = flDiv(i, 64)
+		v.normalize()
+		v.scale(lerp(0.1, 1.0, r * r))
+		sampleList.add(v)
+	}
+
+	# ssao noise texture
+	var noiseList = []
+	for (i in 0 to 15) {
+		noiseList.add((rndGet() * 2) - 1)
+		noiseList.add((rndGet() * 2) - 1)
+		noiseList.add(0)
+		noiseList.add(1)
+	}
+	var noiseTex = fixedTexImage([4, 4], noiseList)
+
+	return {
+		idMat: idMat,
+		pMat: pMat,
+		lMat: lMat,
+		sampleList: sampleList,
+		noiseTex: noiseTex
+	}
+}
+
+func render(cont, mvMat, scene) {
+	var rFlags = cont.renderFlags
+	var idMat = cont.idMat
+	var pMat = cont.pMat
+	var oMat = pMat
+	var lMat = cont.lMat
+
+	# shadow + geometry passes
+	cont.bufferDraw(shadowBuf, oMat, lMat, scene, {
+			uArgs: [
+				["uMVMatrix", "mat", mvMat]
+			],
+			flagArgs: [],
+			shadowFlag: true
+		})
+	cont.bufferDraw(geoBuf, pMat, mvMat, scene, {
+			uArgs: [
+				["lightPMatrix", "mat", oMat],
+				["lightMVMatrix", "mat", lMat]
+			],
+			flagArgs: [],
+			loadTex: [
+				["buffer", shadowBuf, "shadow", 1]
+			]
+		})
+
+	# ssao pass
+	cont.meshDraw(buf:(ssaoBuf), pMat, idMat, "screen", square:(), {
+			uArgs: [
+				["samples", "3f-list", cont.sampleList]
+			],
+			loadTex: [
+				["buffer", geoBuf, "pos", 0],
+				["buffer", geoBuf, "norm", 1],
+				["tex", cont.noiseTex, 2]
+			]
+		})
+
+	# final display
+	cont.meshDraw(shader:(lightShader), idMat, idMat, "screen", square:(), {
+			uArgs: [
+				["noiseFlag", "1f", rFlags.noiseFlag],
+				["noiseSeed", "1f", rFlags.noiseSeed]
+			],
+			loadTex: [
+				["buffer", geoBuf, "pos", 0],
+				["buffer", geoBuf, "norm", 1],
+				["buffer", geoBuf, "color", 2],
+				["buffer", geoBuf, "spec", 3],
+				["buffer", ssaoBuf, "ssao", 4]
+			]
+		})
+}

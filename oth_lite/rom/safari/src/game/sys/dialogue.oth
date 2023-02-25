@@ -1,0 +1,88 @@
+
+func initDialogue(world, dId, dType) {
+	var flagList = world.flagList
+	var data = dData[dId]
+	if (dType = "chest") {
+		data = chestData[dId]
+		playSound("cp_noise.wav")
+		if (data.other = "money") {
+			flagList.coin = flagList.coin + 20
+			if (flagList.coin > 999) { flagList.coin = 999 }
+		}
+	}
+	var selText = data.text
+	if (data.dType = "shop") {
+		if (flagList[data.flag] = false) {
+			if (flagList.coin >= data.price) {
+				flagList.coin = flagList.coin - data.price
+				flagList[data.flag] = true
+				selText = data.buy
+			} else {
+				selText = data.nobuy
+			}
+		}
+	} elsif (data.dType = "end") {
+		world.win = true
+	}
+	return {
+		id: dId,
+		data: {
+			text: selText
+		},
+		cursor: 0,
+		line: 0,
+		done: false
+	}
+}
+
+func updateDialogue(dia)
+{
+	var curLine = dia.data.text[dia.line]
+	if (dia.cursor < curLine.length) {
+		dia.cursor = dia.cursor + 1
+		if (dia.cursor % 2 = 0) { playSound("click.wav") }
+		if (keyPress("a") || keyPress("b")) {
+			dia.cursor = curLine.length
+		}
+	} elsif (keyPress("a") || keyPress("b")) {
+		if (dia.line = dia.data.text.length - 1) {
+			dia.done = true
+		} else {
+			dia.line = dia.line + 1
+			dia.cursor = 0
+		}
+	}
+}
+
+func splitLine(cursor, line) {
+	var pLine = prefixText(line, cursor)
+	var st = splitText(pLine, " ")
+	var lineList = []
+	var curLine = ""
+	for (i in 0 to st.length - 1) {
+		var word = st[i]
+		if (curLine = "") {
+			curLine = word
+		} elsif (curLine.length + word.length + 1 <= 51) {
+			curLine = curLine + " " + word
+		} else {
+			lineList.add(curLine)
+			curLine = word
+		}
+	}
+	if (curLine != "") { lineList.add(curLine) }
+	return lineList
+}
+
+func sceneDialogue(dia) {
+	var sList = []
+	var MID = 133
+	sList.add(box:((0, 0, 0), 1, (MID - 110, 160, 220, 32)))
+	var curLine = dia.data.text[dia.line]
+	var lineList = splitLine(dia.cursor, curLine)
+	for (i in 0 to lineList.length - 1) {
+		sList.add(text:(MID - 102, 168 + (i * 10), lineList[i]))
+	}
+	return list:(sList)
+}
+

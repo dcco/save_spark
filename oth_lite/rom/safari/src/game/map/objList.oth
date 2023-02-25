@@ -1,0 +1,367 @@
+
+func cantPassMap(map, obj, tx, ty) {
+	if (obj.mType = 0) { return false }
+	elsif (obj.mType = 1) { return isSolidMap(map, tx, ty) }
+	# cannot pass if stair blocked by stair
+	if (obj.stairFlag && isStairMap(map, tx, ty)) { return true }
+	# cannot pass if oob, or if map tile is port, and you are unaligned with port
+	if (oobMap(map, tx, ty)) { return true }
+	elsif (map[tx][ty].tType = "stairDown") {
+		return fromUnit(obj.hitbox.x) != tx || fromUnit(obj.hitbox.x + obj.hitbox.width - 1) != tx
+	}
+	# cannot pass if map tile is land, and you are too low
+	if (map[tx][ty].tType != "blank" && fromUnitf(obj.hitbox.z) < 0.96) {
+		return true
+	}
+	if (obj.waterFlag) {
+		# cannot pass if map tile is water, and you are too high
+		if (map[tx][ty].tType = "blank") {
+			return fromUnitf(obj.hitbox.z) > 0.125
+		}
+		return notTerrMap(map, tx, ty)
+	}
+	return notLandMap(map, tx, ty)
+}
+
+(*
+func waterCheck(map, obj, deltaX, deltaY) {
+	if (obj.waterFlag = false) { return true }
+	var newZ = heightMap(map, fromUnitf(centerX(obj.hitbox) + deltaX), fromUnitf(centerY(obj.hitbox) + deltaY))
+	return abs(newZ - fromUnitf(obj.hitbox.z)) < 0.25
+}*)
+
+func moveObjX(map, obj, deltaX)
+{
+	if (deltaX = 0) { return }
+	var refX = 0
+	if (deltaX < 0) { refX = obj.hitbox.x + deltaX }
+	else { refX = obj.hitbox.x + obj.hitbox.width - 1 + deltaX }
+	var ry = obj.hitbox.y
+	var rb = obj.hitbox.y + obj.hitbox.height - 1
+
+	var tx = fromUnit(refX)
+	for (ty in fromUnit(ry) to fromUnit(rb)) {
+		if (cantPassMap(map, obj, tx, ty)) {
+			obj.wallFlag = true
+			obj.wallX = true
+			if (deltaX < 0) {
+				obj.hitbox.x = toUnit(tx + 1)
+				return
+			} else {
+				obj.hitbox.x = toUnit(tx) - obj.hitbox.width
+				return
+			}
+		}
+	}
+
+	obj.hitbox.x = obj.hitbox.x + deltaX
+	return
+}
+
+func moveObjY(map, obj, deltaY)
+{
+	if (deltaY = 0) { return }
+	var refY = 0
+	if (deltaY < 0) { refY = obj.hitbox.y + deltaY }
+	else { refY = obj.hitbox.y + obj.hitbox.height - 1 + deltaY }
+	var rx = obj.hitbox.x
+	var rr = obj.hitbox.x + obj.hitbox.width - 1
+
+	var ty = fromUnit(refY)
+	for (tx in fromUnit(rx) to fromUnit(rr)) {
+		if (cantPassMap(map, obj, tx, ty)) {
+			obj.wallFlag = true
+			obj.wallY = true
+			if (deltaY < 0) {
+				obj.hitbox.y = toUnit(ty + 1)
+				return
+			} else {
+				obj.hitbox.y = toUnit(ty) - obj.hitbox.height
+				return
+			}
+		}
+	}
+
+	obj.hitbox.y = obj.hitbox.y + deltaY
+	return
+}
+
+func calcSpd(spd, ospd) {
+	if (abs(ospd) > 0) { return floor(spd * 0.2) + ospd }
+	return spd
+}
+
+func activeObj(world, obj) {
+	if (obj.cType != "enemy" || obj.name = "RAT") { return true }
+	var dx = abs(centerX(world.player.hitbox) - centerX(obj.hitbox))
+	var dy = abs(centerY(world.player.hitbox) - centerY(obj.hitbox))
+	if (dx > toUnit(9) || dy > toUnit(15)) { return false }
+	return true
+}
+
+func timeSlowCheck(world, obj) {
+	if (world.timeSlow = false || world.timeFlag) { return false }
+	if (obj.cType = "enemy") { return true }
+	return obj.cType = "proj" && obj.evilFlag
+}
+
+func updateObj(world, obj) {
+	# housekeeping
+	if (obj.time > 0) { obj.time = obj.time - 1 }
+	obj.impulse.oxspd = floor(obj.impulse.oxspd * obj.impulse.decay)
+	if (abs(obj.impulse.oxspd) < 80) { obj.impulse.oxspd = 0 }
+	obj.impulse.oyspd = floor(obj.impulse.oyspd * obj.impulse.decay)
+	if (abs(obj.impulse.oyspd) < 80) { obj.impulse.oyspd = 0 }
+	updateMeta(obj.enemyMeta)
+
+	# check if initially grounded
+	# - an object is grounded if its z matches the floor + it is not moving up
+	var map = world.map
+	var groundFlag = false
+	var oldMZ = minZObj(map, obj)
+	if ( obj.zspd <= 0 && obj.hitbox.z <= oldMZ + 32 ) { groundFlag = true }
+	obj.groundFlag = groundFlag
+
+	# move player on x-y axes
+	obj.wallFlag = false
+	obj.wallX = false
+	obj.wallY = false
+	moveObjX(map, obj, calcSpd(obj.xspd, obj.impulse.oxspd))
+	moveObjY(map, obj, calcSpd(obj.yspd, obj.impulse.oyspd))
+
+	# if player is grounded, follow floor (unless it will cause a downwarp)
+	# otherwise, player moves based on speed
+	var minZ = minZObj(map, obj)
+	if (groundFlag) {
+		if (minZ < obj.hitbox.z - 512) { obj.hitbox.z = obj.hitbox.z - 256 }
+		else { obj.hitbox.z = minZ }
+	}
+	else {
+		obj.hitbox.z = obj.hitbox.z + obj.zspd
+		if (obj.hitbox.z < minZ) { obj.hitbox.z = minZ }
+	}
+}
+
+func collideObj(world, obj1, obj2) {
+	if (obj1.cType = "player" && obj2.cType = "enemy" && obj2.alpha > 0) {
+		damagePlayer(obj1, 1)
+	} elsif (obj1.cType = "player" && obj2.cType = "npc") {
+		obj1.npcObj = obj2
+	} elsif (obj1.cType = "player" && obj2.cType = "proj" && obj2.evilFlag) {
+		damagePlayer(obj1, 1)
+	} elsif (obj1.cType = "player" && obj2.cType = "drop" && obj2.time = 0) {
+		if (obj2.name = "COIN") {
+			playSound("coin_collect.wav")
+			if (obj2.blueFlag) {
+				world.flagList.coin = world.flagList.coin + 5
+			} else {
+				world.flagList.coin = world.flagList.coin + 1
+			}
+		} elsif (obj2.name = "HEART") {
+			playSound("heart_collect.wav")
+			world.player.health = world.player.health + 3
+			if (world.player.health > 10) { world.player.health = 10 }
+		}
+		if (world.flagList.coin > 999) { world.flagList.coin = 999 }
+		obj2.decay = true
+	} elsif (obj1.cType = "enemy" && obj2.cType = "proj" && obj1.alpha > 0.9 && obj2.evilFlag = false) {
+		damageEnemy(obj1, 1)
+		obj2.decay = true
+	} elsif (obj1.cType = "enemy" && obj2.cType = "item") {
+		if (obj2.name = "BOMB") {
+			obj1.alpha = 1
+			obj2.bombTime = 301
+		}
+	}
+}
+
+func destroyAllEnemy(world) {
+	var objList = world.objList
+	for (i in 0 to objList.length - 1) {
+		if (objList[i].cType = "enemy") {
+			objList[i].decay = true
+		}
+	}
+}
+
+func decayObj(world, obj) {
+	var dType = obj.dType
+	if (dType is explode) {
+		explode(world, obj)
+	} elsif (dType is jelly) {
+		for (i in 0 to 1; j in 0 to 1) {
+			var newObj = newGameObj("JEL_S")
+			initPrecPos(newObj, obj.hitbox.x + toUnit(0.5 + i),
+				obj.hitbox.y + toUnit(0.5 + j), obj.hitbox.z + toUnit(1))
+			world.objList.add(newObj)
+		}
+	} elsif (dType is corpse) {
+		stopMusic()
+		destroyAllEnemy(world)
+		var newObj = newGameObj("CORPSE")
+		newObj.hitbox.x = obj.hitbox.x
+		newObj.hitbox.y = obj.hitbox.y
+		newObj.hitbox.z = obj.hitbox.z
+		world.objList.add(newObj)
+	} elsif (dType is ratboy) {
+		var newObj = newGameObj("NPC")
+		var tx = fromUnit(centerX(obj.hitbox))
+		var ty = fromUnit(centerY(obj.hitbox))
+		initPos(world.map, newObj, tx, ty)
+		world.objList.add(newObj)
+		newObj.npcId = 7
+		newObj.variant = dData[7].variant * 2
+	}
+	# enemy must drop item
+	if (obj.cType = "enemy" && (dType is jelly) = false) {
+		var dropName = "COIN"
+		if (rndChance(1, 7)) { dropName = "HEART" }
+		var newObj = newGameObj(dropName)
+		newObj.time = 4
+		if (dropName = "COIN" && (obj.name = "KNIGHT" || obj.name = "KNIGHT_F" || obj.name = "WIZZY" || obj.name = "CRIT_B")) {
+			newObj.blueFlag = true
+			newObj.variant = 3
+		}
+		initPrecPos(newObj, obj.hitbox.x, obj.hitbox.y, obj.hitbox.z)
+		world.objList.add(newObj)
+	}
+}
+
+func updateObjList(world) {
+	var objList = world.objList
+	# object movement phase
+	for (i in 0 to objList.length - 1) {
+		var curObj = objList[i]
+		var stateX = stateTable[curObj.state]
+		if (curObj.iFlag = false) {
+			stateX.init(world, curObj)
+			curObj.iFlag = true
+		}
+		curObj.active = activeObj(world, curObj)
+		# time slow check
+		if (curObj.active && timeSlowCheck(world, curObj) = false) {
+			stateX.motion(world, curObj)
+			updateObj(world, curObj)
+		}
+	}
+	# object collision phase
+	for (i in 1 to objList.length - 1) {
+		for (j in 0 to i - 1) {
+			var obj1 = objList[i]
+			var obj2 = objList[j]
+			if (obj1.active && obj2.active) {
+				if (((obj1.cType = "npc" || obj2.cType = "npc") && overlapsBoxEx(obj1.hitbox, obj2.hitbox, 2048, 1024)) ||
+					overlapsBox(obj1.hitbox, obj2.hitbox)) {
+					collideObj(world, obj1, obj2)
+					collideObj(world, obj2, obj1)
+				}
+			}
+		}
+	}
+	# object destruction phase
+	for (i in 0 to objList.length - 1) {
+		if (objList[i].decay) {
+			decayObj(world, objList[i])
+		}
+	}
+	var nextList = []
+	for (i in 0 to objList.length - 1) {
+		if (objList[i].decay = false) {
+			nextList.add(objList[i])
+		}
+	}
+	world.objList = nextList
+	# object counting phase
+	var boomCount = 0
+	var activeEnemyCount = 0
+	var wizzyCount = 0
+	for (i in 0 to objList.length - 1) {
+		if (objList[i].name = "BOOMER") { boomCount = boomCount + 1	}
+		if (objList[i].cType = "enemy" && objList[i].active) {
+			activeEnemyCount = activeEnemyCount + 1
+			if (objList[i].name = "WIZZY") { wizzyCount = wizzyCount + 1 }
+		}
+	}
+	world.boomCount = boomCount
+	world.activeEnemyCount = activeEnemyCount
+	world.wizzyCount = wizzyCount
+}
+
+func selectFrame(obj, anim, adef) {
+	if (anim != obj.lastAnim) {
+		obj.animTime = getTime()
+		obj.lastAnim = anim
+	}
+	if (adef is loop) {
+		var frameList = adef.2
+		var ix = ((getTime() - obj.animTime) / adef.1) % frameList.length
+		return frameList[ix]
+	} elsif (adef is seq) {
+		var frameList = adef.2
+		var ix = ((getTime() - obj.animTime) / adef.1)
+		if (ix >= frameList.length) { ix = frameList.length - 1}
+		return frameList[ix]
+	}
+	return adef.1
+}
+
+func sceneJelly(sList, obj) {
+	var mList = []
+	mList.add(offset:(1, 1, 1.5, sprite:("jel-face", 0, false)))
+	mList.add(mesh:("jelly", "jelly", [0, 0, 0, 0, 0, 0]))
+	var sMain = list:(mList)
+	var sRot = offset:(1.5, 1.5, 1.5, rotate:(obj.zAngle, offset:(-1.5, -1.5, -1.5, sMain)))
+	var ox = fromUnitf(obj.hitbox.x)
+	var oy = -2 - fromUnitf(obj.hitbox.z)
+	var oz = fromUnitf(obj.hitbox.y)
+	sList.add(sceneMetaMod(obj.enemyMeta, offset:(ox, oy, oz, sRot)))
+	#sList.add(offset:(ox + 1, oy + 1, oz + 1.5, ))
+	#sList.add(sceneMetaMod(obj.enemyMeta, s))
+}
+
+func sceneJellyS(sList, obj) {
+	var sMain = mesh:("jel_small", "jel-small", [0, 0, 0, 0, 0, 0])
+	sList.add(sMain)
+	var sRot = offset:(0.5, 0.5, 0.5, rotate:(obj.zAngle, offset:(-0.5, -0.5, -0.5, sMain)))
+	var ox = fromUnitf(obj.hitbox.x)
+	var oy = 0 - fromUnitf(obj.hitbox.z)
+	var oz = fromUnitf(obj.hitbox.y)
+	sList.add(sceneMetaMod(obj.enemyMeta, offset:(ox, oy, oz, sRot)))
+}
+
+func sceneSpark(sList, obj) {
+	var sMain = mesh:("cage", "cage", [0, 0, 0, 0, 1, 1])
+	var ox = fromUnitf(obj.hitbox.x)
+	var oy = -1.01 - fromUnitf(obj.hitbox.z)
+	var oz = fromUnitf(obj.hitbox.y)
+	sList.add(offset:(ox, oy, oz, sMain))
+	sList.add(offset:(ox, oy, oz + 1, sprite:("spark", 1, false)))
+}
+
+func sceneObj(sList, obj) {
+	# do not draw the player (player has custom draw algorithm)
+	if (obj.name = "PLAYER") { return }
+	elsif (obj.name = "JELLY") { sceneJelly(sList, obj) return }
+	elsif (obj.name = "JEL_S") { sceneJellyS(sList, obj) return }
+	elsif (obj.name = "SPARK") { sceneSpark(sList, obj) return }
+	# get current frame
+	var stateX = stateTable[obj.state]
+	var anim = stateX.anim(obj)
+	var adef = animTable[obj.sName][anim]
+	var frame = selectFrame(obj, anim, adef)
+	# draw the sprite
+	var sprite = sprite:(obj.sName, frame + obj.variant, obj.facing)
+	var s = offset:(fromUnitf(obj.hitbox.x), 0 - fromUnitf(obj.hitbox.z), fromUnitf(centerY(obj.hitbox) + 1), sprite)
+	# modifiers
+	s = sceneMetaMod(obj.enemyMeta, s)
+	if (obj.alpha < 1.0) { s = alpha:(obj.alpha, s) }
+	sList.add(s)
+}
+
+func sceneObjList(objList) {
+	var sList = []
+	for (i in 0 to objList.length - 1) {
+		sceneObj(sList, objList[i])
+	}
+	return list:(sList)
+}

@@ -1,0 +1,21 @@
+
+{
+	"target": "es5",
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.d.ts",
+		"node_modules/webgl-strict-types/index.d.ts",
+		"node_modules/@types/howler/index.d.ts"
+	],
+	"compilerOptions": {
+		"module": "amd",
+		"lib": [
+			"dom",
+			"es5",
+			"es2015.iterable"
+		],
+		"baseUrl": "test",
+		"outDir": "bin",
+		"strictNullChecks": true
+	}
+}

@@ -1,0 +1,45 @@
+
+func testScene()
+{
+	var sBlock = mesh:("test_box", "tset", [1, 2, 1, 2, 1, 2])
+	return sBlock
+}
+
+func testCamMat()
+{
+	var camMat = newMat()
+	camMat.rotateX(-30)
+	camMat.translate(0 - (0 + 0.5), 0 - (0 - 4.5), -8.5)
+	#camMat.rotateX(-35)
+	#camMat.translate(0 - (0 + 0.5), 0 - (0 - 6.5), -7.5)
+	return camMat
+}
+
+func main() {
+	var DELAY = 1000 / 60
+	var lastTime = getTime()
+	var remTime = 0
+
+	dumpLevelRaw()
+	debugLog("alpha v0.3")
+
+	var sys = initSystem()
+	playMusic("cities.ogg")
+
+	tinyLoop(fn() {
+		var curTime = getTime()
+		var diffTime = (curTime + remTime) - lastTime
+		var framesPassed = diffTime / DELAY
+		remTime = diffTime % DELAY
+		lastTime = curTime
+		for (i in 0 to framesPassed - 1) {
+			inputRefresh()
+			musicRefresh()
+			updateSystem(sys)
+		}
+		var camMat = testCamMat()
+		drawScene(sceneSystem(sys))
+		passRenderFlags(renderFlags(sys))
+		drawScene3d(camMat, scene3dSystem(sys))
+	})
+}

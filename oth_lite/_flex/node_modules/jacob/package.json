@@ -1,0 +1,46 @@
+{
+  "name": "jacob",
+  "version":  "1.0.5",
+  "description": "A lexer and parser generator for writing interpreters and compilers",
+  "main": "index.js",
+  "directories": {
+    "example": "examples",
+    "test": "test"
+  },
+  "dependencies": {
+    "junq": "^1.0.1",
+    "minimist": "^1.1.0"
+  },
+  "devDependencies": {
+    "chai": "^1.9.1",
+    "grunt": "^0.4.5",
+    "grunt-mocha-test": "^0.11.0",
+    "mocha": "^1.21.4"
+  },
+  "scripts": {
+    "test": "mocha ./test/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Canna71/Jacob.git"
+  },
+  "bin": {
+    "jacob": "./cmd/cmd.js"
+  },
+  "keywords": [
+    "lexer",
+    "scanner",
+    "parser",
+    "compiler",
+    "grammar"
+  ],
+    "author": {
+        "name": "Gabriele Cannata",
+        "email": "gcannata@gmail.com"
+    },
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Canna71/Jacob/issues"
+  },
+  "homepage": "http://canna71.github.io/Jacob/"
+}

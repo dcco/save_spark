@@ -1,0 +1,22 @@
+{
+  "name": "tiny_script",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "bin": {
+    "tiny_script": "bin/mylexer.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/howler": "^2.2.7",
+    "howler": "^2.2.3",
+    "tsc": "^2.0.4"
+  },
+  "devDependencies": {
+    "webgl-strict-types": "^1.0.5"
+  }
+}

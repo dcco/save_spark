@@ -1,0 +1,118 @@
+
+var noState = {
+	init: fn(world, obj) {},
+	anim: fn(obj) { return "na" },
+	motion: fn(world, obj) {}
+}
+
+var decayState = {
+	init: fn(world, obj) {},
+	anim: fn(obj) { return "decay" },
+	motion: fn(world, obj) {
+		if (obj.time = 0) { obj.decay = true }
+	}	
+}
+
+var decayState2 = {
+	init: fn(world, obj) {},
+	anim: fn(obj) { return "decay" },
+	motion: fn(world, obj) {
+		if (obj.time = 0 || obj.wallFlag) { obj.decay = true }
+	}	
+}
+
+var boomerState = {
+	init: fn(world, obj) {
+		obj.topSpd = sqrt((obj.ixspd * obj.ixspd) + (obj.iyspd * obj.iyspd))
+		obj.backSpd = obj.topSpd
+		obj.bTime = 0
+		obj.wallTime = 0
+	},
+	anim: fn(obj) { return "spin" },
+	motion: fn(world, obj) {
+		# main speed calcs
+		obj.backSpd = obj.backSpd - 8
+		if (obj.backSpd > 0) {
+			obj.xspd = (obj.ixspd * obj.backSpd) / obj.topSpd
+			obj.yspd = (obj.iyspd * obj.backSpd) / obj.topSpd
+		} else {
+			var target = obj.target
+			var nxspd = target.hitbox.x - obj.hitbox.x
+			var nyspd = target.hitbox.y - obj.hitbox.y
+			var z = 0 - flDiv(obj.backSpd, obj.topSpd)
+			if (z > 1) { z = 1 }
+			obj.xspd = floor(z * (nxspd / 4))
+			obj.yspd = floor(z * (nyspd / 4))
+			
+			if (abs(target.hitbox.x - obj.hitbox.x) < (512 + abs(target.xspd)) &&
+				abs(target.hitbox.y - obj.hitbox.y) < (512 + abs(target.yspd))) {
+				obj.decay = true
+			}
+		}
+		# boomerang wall hits
+		if (obj.wallFlag) {
+			obj.xspd = 0
+			obj.yspd = 0
+			if (obj.backSpd > 0) { obj.backSpd = 0 }
+			if (obj.wallTime < 1) { playSound("bonk2.wav") } 
+			obj.wallTime = obj.wallTime + 1
+		}
+		# emergency decay
+		obj.bTime = obj.bTime + 1
+		if (obj.bTime > 240) { obj.decay = true }
+		# obj.target.hitbox.x
+		# obj.target.hitbox.y
+	}
+}
+
+func bombTile(world, cx, cy) {
+	var map = world.map
+	for (i in -1 to 1; j in -1 to 1) {
+		if (oobMap(map, cx + i, cy + j) = false && map[cx + i][cy + j].decor = "rock") {
+			map[cx + i][cy + j].decor = "none"
+			explodeAt(world, toUnit(cx + i) + 1024, toUnit(cy + j) + 1024, map[cx + i][cy + j].height + 1)
+		}
+	}
+}
+
+func objDist(obj1, obj2) {
+	var dx = abs(centerX(obj1.hitbox) - centerX(obj2.hitbox))
+	var dy = abs(centerY(obj1.hitbox) - centerY(obj2.hitbox))
+	return sqrt((dx * dx) + (dy * dy))
+}
+
+func bombWorld(world, obj) {
+	var objList = world.objList
+	for (i in 0 to objList.length - 1) {
+		var otherObj = objList[i]
+		if ((otherObj.cType = "player" || otherObj.cType = "enemy") && objDist(obj, otherObj) < toUnit(2)) {
+			if (otherObj.cType = "player") {
+				damagePlayer(otherObj, 3)
+			} elsif (otherObj.cType = "enemy") {
+				damageEnemy(otherObj, 3)
+			}
+		}
+	}
+}
+
+var bombState = {
+	init: fn(world, obj) {
+		obj.bombTime = 0
+	},
+	anim: fn(obj) { return "idle" },
+	motion: fn(world, obj) {
+		obj.bombTime = obj.bombTime + 1
+		if (obj.bombTime > 300) {
+			playSound("explode.wav")
+			bombTile(world, fromUnit(centerX(obj.hitbox)), fromUnit(centerY(obj.hitbox)))
+			bombWorld(world, obj)
+			obj.decay = true
+		}
+		if (obj.bombTime > 120) {
+			var delay = 100
+			if (obj.bombTime > 210) { delay = 50 }
+			var variant = ((getTime() + obj.animOffset) / delay) % 4
+			obj.variant = variant * 3
+		}
+	}
+}

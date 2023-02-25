@@ -1,0 +1,17 @@
+coverage.html
+lib-cov
+.DS_Store
+node_modules
+personal_docs
+*.sock
+testing
+_mocha.js
+my-reporter.js
+*.sw*
+lib/browser/diff.js
+.idea
+*.iml
+examples/Expression/expast.js
+examples/Expression/expeval.js
+examples/Expression/expint.js
+examples/basiclexer.js

@@ -1,0 +1,54 @@
+
+	# size, ctype, sprite name, initial state, decay type
+var indexData = {
+	PLAYER: x:((4, 0.1), ("player", null), "may", "pc", explode:()),
+	COOTS: x:((4, 4), ("coots", null), "coots", "coots", none:()),
+	BOOMER: x:((5, 5), ("proj", null), "boomer", "boomerang", none:()),
+	BOOMER_X: x:((5, 5), ("proj", null), "boomerX", "boomerang", none:()),
+	BOMB: x:((8, 8), ("item", null), "bomb", "bomb", explode:()),
+	CRIT: x:((7, 5), ("enemy", "norm", 2), "crit", "crit", explode:()),
+	JELLY: x:((24, 24), ("enemy", "norm", 2), "na", "shuffle", jelly:()),
+	JEL_S: x:((8, 8), ("enemy", "norm", 4), "na", "shuffle", explode:()),
+	FRYBALL: x:((6, 8), ("enemy", "norm", 100), "fryball", "bounce", none:()),
+	WIZZY: x:((8, 8), ("enemy", "norm", 5), "wizzy", "wizz", explode:()),
+	KNIGHT: x:((8, 8), ("enemy", "norm", 5), "knight", "knight", explode:()),
+	KNIGHT_F: x:((8, 8), ("enemy", "norm", 15), "knightFin", "knightF", explode:()),
+	ENERGY: x:((4, 4), ("proj", null), "energy", "decay2", none:()),
+	CRIT_B: x:((7, 5), ("enemy", "norm", 4), "critBlack", "critBlack", explode:()),
+	CRIT_R: x:((7, 5), ("enemy", "norm", 5), "critRed", "crit", explode:()),
+	CRIT_Y: x:((7, 5), ("enemy", "norm", 5), "critYellow", "crit", explode:()),
+	CRIT_G: x:((7, 5), ("enemy", "norm", 5), "critGreen", "crit", explode:()),
+	EXPLODE: x:((6, 6), ("effect", null), "explode", "decay", none:()),
+	NPC: x:((8, 8), ("npc", "npc"), "npc", "npc", none:()),
+	CHEST: x:((8, 8), ("npc", "chest"), "chest", "chest", none:()),
+	COIN: x:((8, 8), ("drop", null), "coin", "coin", none:()),
+	HEART: x:((8, 8), ("drop", null), "coin", "heart", none:()),
+	SPARK: x:((16, 16), ("trap", null), "na", "spark", none:()),
+	RAT: x:((25, 8), ("enemy", "norm", 40), "rat", "rat", corpse:()),
+	CORPSE: x:((25, 8), ("trap", null), "rat", "corpse", ratboy:())
+}
+
+func getSize(name) {
+	return indexData[name].1
+}
+
+func getCType(name) {
+	var cData = indexData[name].2
+	return cData.1
+}
+
+func getCData(name) {
+	return indexData[name].2
+}
+
+func getSName(name) {
+	return indexData[name].3
+}
+
+func getInitState(name) {
+	return indexData[name].4
+}
+
+func getDType(name) {
+	return indexData[name].5
+}

@@ -1,0 +1,83 @@
+
+# mtype: 0 - goes through anything, 1 - goes over gaps, 2 - goes over only land
+
+func newGameObj(name) {
+	var (w, h) = getSize(name)
+	var iState = getInitState(name)
+	var newObj = {
+		name: name,
+		# movement
+		hitbox: newBox(floor(pxUnit(w)), floor(pxUnit(h))),
+		mType: 2,
+		active: true,
+		xspd: 0,
+		yspd: 0,
+		zspd: 0,
+		impulse: {
+			oxspd: 0,
+			oyspd: 0,
+			decay: 0
+		},
+		# collision
+		cType: getCType(name),
+		groundFlag: false,
+		stairFlag: false,
+		wallFlag: false,
+		wallX: false,
+		wallY: false,
+		evilFlag: false,
+		# anim
+		sName: getSName(name),
+		variant: 0,
+		lastAnim: "na",
+		animTime: 0,
+		animOffset: rndRange(0, 1000),
+		facing: false,
+		enemyMeta: initEnemyMeta(),
+		# special anim
+		zAngle: 0,
+		alpha: 1,
+		# state
+		iFlag: false,
+		state: iState,
+		time: 0,
+		# water
+		waterFlag: false,
+		# decay
+		decay: false,
+		dType: getDType(name)
+	}
+	if (newObj.cType = "enemy") {
+		if (newObj.name = "FRYBALL") {
+			newObj.stairFlag = true
+		}
+		newObj.health = getCData(name).3
+	} elsif (newObj.cType = "proj") {
+		newObj.mType = 1
+	} elsif (newObj.cType = "npc") {
+		newObj.nType = getCData(name).2
+	}
+	return newObj
+}
+
+func minZObj(map, obj) {
+	return toUnit(heightMap(map, fromUnitf(centerX(obj.hitbox)), fromUnitf(centerY(obj.hitbox))))
+}
+
+func initPos(map, obj, tx, ty) {
+	obj.hitbox.x = toUnit(tx) + 1024 - (obj.hitbox.width / 2)
+	obj.hitbox.y = toUnit(ty) + 1024 - (obj.hitbox.height / 2)
+	obj.hitbox.z = minZObj(map, obj)
+}
+
+func initPrecPos(obj, x, y, z) {
+	obj.hitbox.x = x
+	obj.hitbox.y = y
+	obj.hitbox.z = z
+}
+
+func setImpulse(obj, oxspd, oyspd, decay) {
+	obj.impulse.oxspd = oxspd
+	obj.impulse.oyspd = oyspd
+	obj.impulse.decay = decay
+}

@@ -1,0 +1,72 @@
+
+var animTable = {
+	boomer: { spin: loop:(100, [1, 2, 3, 4]) },
+	boomerX: { spin: loop:(100, [1, 2, 3, 4]) },
+	bomb: { idle: loop:(100, [1, 2, 3]) },
+	energy: { decay: loop:(100, [1, 2]) },
+	crit: {
+		idle: frame:(1),
+		jump: frame:(2),
+		fall: frame:(3)
+	},
+	crit: {
+		idle: frame:(1),
+		jump: frame:(2),
+		fall: frame:(3)
+	},
+	critBlack: {
+		idle: frame:(1),
+		jump: frame:(2),
+		fall: frame:(3)
+	},
+	critRed: {
+		idle: frame:(1),
+		jump: frame:(2),
+		fall: frame:(3)
+	},
+	critYellow: {
+		idle: frame:(1),
+		jump: frame:(2),
+		fall: frame:(3)
+	},
+	critGreen: {
+		idle: frame:(1),
+		jump: frame:(2),
+		fall: frame:(3)
+	},
+	fryball: { idle: loop:(50, [1, 2]) },
+	wizzy: {
+		idle: frame:(1),
+		fire: seq:(300, [2, 3])
+	},
+	knight: {
+		idle: loop:(200, [1, 2, 1, 3])
+	},
+	knightFin: {
+		idle: loop:(200, [1, 2, 1, 3])
+	},
+	explode: {
+		decay: seq:(40, [1, 2, 3, 4, 5, 6, 7, 8])
+	},
+	coots: {
+		na: frame:(1),
+		idle: frame:(1),
+		walk: loop:(100, [2, 3])
+	},
+	npc: {
+		idle: frame:(2)
+	},
+	chest: {
+		close: frame:(0),
+		open: frame:(1)
+	},
+	coin: {
+		coin: loop:(200, [0, 1, 2, 1]),
+		heart: frame:(6)
+	},
+	rat: {
+		na: frame:(1),
+		idle: loop:(80, [1, 2, 3]),
+		bad: frame:(2)
+	}
+}

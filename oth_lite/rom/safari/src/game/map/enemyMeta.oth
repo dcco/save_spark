@@ -1,0 +1,20 @@
+
+func initEnemyMeta() {
+	return {
+		shakeTime: 0
+	}
+}
+
+func updateMeta(meta)
+{
+	if (meta.shakeTime > 0) { meta.shakeTime = meta.shakeTime - 1 }
+}
+
+func damageMeta(meta) {
+	meta.shakeTime = 30
+}
+
+func sceneMetaMod(meta, s) {
+	if (meta.shakeTime > 0) { return offset:(rndNeg(0.2 * rndGet()), 0, 0, s) }
+	return s
+}

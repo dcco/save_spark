@@ -1,0 +1,164 @@
+
+# 51 character long lines
+var maxline = "HELLO. THIS IS A TEST. I'M GOING TO SEE HOW MUCH TE"
+
+var dData = [
+	{
+		dType: "text",
+		variant: 0,
+		text: [
+			"I HEARD THERE'S AN ISLAND TO THE WEST OF HERE. I DON'T KNOW HOW YOU'D GET THERE THOUGH.",
+			"I'M SURE IT'S A NICE PLACE."
+		]
+	},
+	{
+		dType: "shop",
+		variant: 1,
+		flag: "time",
+		price: 100,
+		text: [
+			"THANKS FOR DOING BUSINESS."
+		],
+		nobuy: [
+			"HEY, IF YOU COME BACK WITH 100 COINS, I'VE GOT SOMETHING GOOD FOR YOU."
+		],
+		buy: [
+			"OBTAINED THE TIME SLOW WATCH.",
+			"WITH THAT WATCH, YOU CAN PRESS [L] TO SLOW DOWN TIME USING THE MAGIC METER.",
+			"I'LL WARN YOU THOUGH - DO NOT TRY TO USE IT IF YOUR MAGIC METER IS AT 0.",
+			"IT WILL BE BAD.",
+			"THANKS FOR DOING BUSINESS."
+		]
+	},
+	{
+		dType: "text",
+		variant: 4,
+		text: [
+			"IF YOU WERE EXPECTING A COOL SECRET, SORRY.",
+			"IT'S JUST ME, ARCHIBALD."
+		]
+	},
+	{
+		dType: "text",
+		variant: 5,
+		text: [
+			"THERE SURE ARE A LOT OF ROCKS AROUND HERE HUH?",
+			"I WONDER IF THERE'S A WAY TO GET RID OF THEM..."
+		]
+	},
+	{
+		dType: "text",
+		variant: 2,
+		text: [
+			"DID YOU KNOW THAT IF YOU TRAVEL FAR AWAY FROM PUSHABLE BLOCKS,",
+			"THEY WILL TRAVEL BACK TO THEIR ORIGINAL LOCATIONS?",
+			"ONE OF NATURE'S GREAT MYSTERIES..."
+		]
+	},
+	{
+		dType: "text",
+		variant: 7,
+		text: [
+			"HELLO. MY NAME IS MR DELETE.",
+			"I HAVE THE POWER TO DELETE PEOPLE'S SAVE FILES.",
+			"BUT DID YOU KNOW, THIS GAME DOESN'T EVEN HAVE SAVE FILES?",
+			"WHAT A TERRIBLE GAME."
+		]
+	},
+	{
+		dType: "text",
+		variant: 3,
+		text: [
+			"I LIVE BY THE SEA, RIGHT NEXT TO THIS LOVELY LAKE.",
+			"BUT I DON'T KNOW HOW TO SWIM..."
+		]
+	},
+	{
+		dType: "end",
+		variant: 6,
+		text: [
+			"AW MAN, YOU BEAT ME....",
+			"RATS!!!"
+		]
+	}
+]
+
+var chestData = [
+	{
+		dType: "chest",
+		flag: "quad",
+		other: "na",
+		text: [
+			"FOUND QUAD BOOMERANGS!",
+			"NOW YOU CAN THROW 4 BOOMERANGS AT ONCE."
+		]
+	},
+	{
+		dType: "chest",
+		flag: "push",
+		other: "na",
+		text: [
+			"FOUND THE PUSH UPGRADE!",
+			"NOW YOU CAN PUSH CERTAIN BLOCKS."
+		]
+	},
+	{
+		dType: "chest",
+		flag: "money1",
+		other: "money",
+		text: [
+			"FOUND 20 COINS!"
+		]
+	},
+	{
+		dType: "chest",
+		flag: "money2",
+		other: "money",
+		text: [
+			"FOUND 20 COINS!"
+		]
+	},
+	{
+		dType: "chest",
+		flag: "money3",
+		other: "money",
+		text: [
+			"FOUND 20 COINS!"
+		]
+	},
+	{
+		dType: "chest",
+		flag: "money4",
+		other: "money",
+		text: [
+			"FOUND 20 COINS!"
+		]
+	},
+	{
+		dType: "chest",
+		flag: "money5",
+		other: "money",
+		text: [
+			"FOUND 20 COINS!"
+		]
+	},
+	{
+		dType: "chest",
+		flag: "bomb",
+		other: "na",
+		text: [
+			"FOUND BOMBS!",
+			"PRESS [K] TO PLACE A BOMB ON THE OVERWORLD.",
+			"BE CAREFUL NOT TO BLOW YOURSELF UP!"
+		]
+	},
+	{
+		dType: "chest",
+		flag: "raft",
+		other: "na",
+		text: [
+			"FOUND THE RAFT!",
+			"YOU CAN USE IT TO TRAVERSE BODIES OF WATER."
+		]
+	}
+]

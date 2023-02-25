@@ -1,0 +1,72 @@
+
+func stairUpMesh()
+{
+	var vs = []
+	var PX = 0.125
+	for (i in 0 to 7) {
+		vs.concat(frontQuad([0, i * PX], [1, PX], (i + 1) * PX))
+	}
+	for (i in 0 to 7) {
+		vs.concat(botQuad([0, i * PX], [1, PX], i * PX))
+	}
+	return vs
+	#vs.concat(topQuad([0, 0], [1, PX], z))
+}
+
+func houseMesh()
+{
+	var vs = []
+	var PX = 0.125
+	vs.concat(frontQuad([0, 0], [5, 3], 0))
+	vs.concat(backQuad([0, 0], [5, 3], -2))
+	vs.concat(leftQuad([-2, 0], [2, 3], 0))
+	vs.concat(rightQuad([-2, 0], [2, 3], 5))
+
+	vs.concat(frontQuad([0 - PX, 0 - PX], [5 + (2 * PX), PX], PX))
+	vs.concat(backQuad([0 - PX, 0 - PX], [5 + (2 * PX), PX], -2 - PX))
+	vs.concat(leftQuad([-2 - PX, 0 - PX], [2 + (2 * PX), PX], 0 - PX))
+	vs.concat(rightQuad([-2 - PX, 0 - PX], [2 + (2 * PX), PX], 5 + PX))
+	
+	vs.concat(topQuad([0 - PX, -2 - PX], [5 + (2 * PX), 2 + (2 * PX)], 0 - PX))
+	return vs
+}
+
+func waterMesh()
+{
+	var vs = []
+	vs.concat(topQuad([0, 0], [4.01, 4.01], 0))
+	return vs
+}
+
+func raftMesh()
+{
+	var vs = []
+	vs.concat(topQuad([0, 0], [1, 1], 0))
+	return vs
+}
+
+func jellyMesh(s)
+{
+	var vs = []
+	vs.concat(frontQuad([0, 0], [s, s], 0))
+	vs.concat(backQuad([0, 0], [s, s], s))
+	vs.concat(leftQuad([0, 0], [s, s], 0))
+	vs.concat(rightQuad([0, 0], [s, s], s))	
+	vs.concat(topQuad([0, 0], [s, s], 0))
+	vs.concat(botQuad([0, 0], [s, s], s))	
+	return vs
+}
+
+buildMesh("stair_up", stairUpMesh())
+buildMesh("house", houseMesh())
+buildMesh("water", waterMesh())
+buildMesh("raft", raftMesh())
+buildMesh("jelly", jellyMesh(3))
+buildMesh("jel_small", jellyMesh(1))
+buildMesh("cage", jellyMesh(2))
+
+buildMesh("left_tile", leftQuad([0, 0], [1, 1], 0))
+buildMesh("right_tile", leftQuad([0, 0], [1, 1], 1))
+buildMesh("top_tile", topQuad([0, 0], [1, 1], 0))
+buildMesh("front_tile", frontQuad([0, 0], [1, 1], 1))
+buildMesh("back_tile", backQuad([0, 0], [1, 1], 0))
